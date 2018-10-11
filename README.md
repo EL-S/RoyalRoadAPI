@@ -45,7 +45,7 @@ Data that can be requested includes:
 		returns the amount of chapters as an integer,
 		recommended to get the length of chapter_link instead if both are needed (to be efficient)
 
-	get_fiction_info(fiction_id) #uses fiction the id instead
+	get_fiction_info(fiction_id) #uses the fiction id instead
 		The data is returned as a list in the form,
 		eg. [url,title,cover_image,author,description,genres,ratings,stats,chapter_links,chapter_amount]
 		ratings and stats are both returned as lists in the forms
