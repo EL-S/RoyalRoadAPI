@@ -105,8 +105,6 @@ def get_fiction_statistics(soup):
     pages = soup.findAll('li', attrs={'class': 'bold uppercase font-red-sunglo'})[5].text.strip()
     stats = total_views,average_views,followers,favorites,pages
     return stats
-    
-    
 
 def get_chapter_links(soup): #finished
     chapter_links = []
@@ -115,6 +113,14 @@ def get_chapter_links(soup): #finished
         chapter_link = tag.get("data-url")
         chapter_links.append(chapter_link)
     return chapter_links
+
+def get_chapter_amount(soup):
+    chapter_links = []
+    chapter_links_tag = soup.findAll('tr', attrs={'style': 'cursor: pointer'})
+    for tag in chapter_links_tag:
+        chapter_link = tag.get("data-url")
+        chapter_links.append(chapter_link)
+    return len(chapter_links)
 
 def get_chapters(chapter_links):
     global chapters_downloaded,chapters_html,fiction_html
