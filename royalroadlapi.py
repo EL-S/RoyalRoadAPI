@@ -3,6 +3,9 @@ from tornado import ioloop, httpclient
 from datetime import datetime
 import re
 import os
+import uuid
+from shutil import copyfile, make_archive, rmtree
+import zipfile
 
 i = 0
 chapters_downloaded = []
@@ -71,7 +74,7 @@ def get_fiction_info(fiction_id): #finished
             return None
         else:
             plural = "s"
-        print("Downloading (" + str(chapter_amount) + " chapter" + plural + "): " + title + " - " + author + ".html")
+        print("Downloading (" + str(chapter_amount) + " chapter" + plural + "): " + title + " - " + author + ".epub")
         #print(url,title,cover_image,author,description,ratings,chapter_links,chapter_amount)
         return url,title,cover_image,author,description,genres,ratings,stats,chapter_links,chapter_amount
     else:
@@ -186,46 +189,101 @@ def save_to_hdd(fiction_html,chapters_html,chapters_downloaded,directory="Fictio
             genre_html += " | " + genre
     stats_html = "<b><br>Total Views:</b> " + stats[0] + "<b> | Average Views:</b> " + stats[1] + "<b> | Followers:</b> " + stats[2] + "<b> | Favorites:</b> " + stats[3] + "<b> | Pages:</b> " + stats[4]
     statistics = "<center><b>Chapters:</b> " + str(chapter_amount) + "<b> | Overall Score:</b> " + ratings[0] + "<b> | Best Score:</b> " + ratings[1] + "<b> | Ratings:</b> " + ratings[2] + "<b><br>Style Score:</b> " + ratings[3] + "<b> | Story Score:</b> " + ratings[4] + "<b> | Character Score:</b> " + ratings[5] + "<b> | Grammar Score:</b> " + ratings[6] + stats_html + "</center></p></b>"
-    data = "<link rel='stylesheet' href='styles/tables.css'><center><img src='" + cover_image + "'><b><h1> \"<a href='" + url + "'>" + str(title) + "</a>\" by \"" + str(author) + "\"</h1></b><br>" +"<br><b>" + genre_html + "</b>" + statistics + "<h2>Last updated: " + time + "</h2></center><br><h3>Description: " + str(description) + "</h3><br>" + fiction_html
+    data = "<link rel='stylesheet' href='tables.css'><center><img src='" + cover_image + "'><b><h1> \"<a href='" + url + "'>" + str(title) + "</a>\" by \"" + str(author) + "\"</h1></b><br>" +"<br><b>" + genre_html + "</b>" + statistics + "<h2>Last updated: " + time + "</h2></center><br><h3>Description: " + str(description) + "</h3><br>"# + fiction_html
     title_clean = re.sub(r'[\\/*?:"<>|]',"",title)
     author_clean = re.sub(r'[\\/*?:"<>|]',"",author)
-    print("Saving: " + directory + title_clean + " - " + author_clean + ".html")
+    print("Saving EPUB: " + directory + title_clean + " - " + author_clean + ".epub")
     name = title_clean + " - " + author_clean
     folder_name = name + "/"
     os.makedirs(directory+folder_name+"OEBPS/", exist_ok=True)
+    os.makedirs(directory+folder_name+"META-INF/", exist_ok=True)
     file_name = name + ".html"
     full_path = directory + folder_name + file_name
-    with open(full_path, "w", encoding="utf-8") as file_webnovel:
-        file_webnovel.write(data)
-    print("Saved:",full_path)
-    uid = "test"
+    #with open(full_path, "w", encoding="utf-8") as file_webnovel:
+    #    file_webnovel.write(data)
+    #print("Saved:",full_path)
+    uuid_str = str(uuid.uuid4())
     with open(directory + folder_name + "toc.ncx", "w", encoding="utf-8") as file_toc:
         file_toc.write("""<?xml version='1.0' encoding='UTF-8'?>
 <ncx version="2005-1" xmlns="http://www.daisy.org/z3986/2005/ncx/">
   <head>
-    <meta name="dtb:uid" content=\""""+uid+"""\"/>
+    <meta name="dtb:uid" content=\"""" + uuid_str + """\"/>
     <meta name="dtb:generator" content="DumbEpub"/>
     <meta name="dtb:depth" content="2"/>
     <meta name="dtb:totalPageCount" content="0"/>
     <meta name="dtb:maxPageNumber" content="0"/>
   </head>
   <docTitle>
-    <text>"""+str(title)+"""</text>
+    <text>"""+str(title_clean)+"""</text>
   </docTitle>
-  <navMap>
-    <navPoint class="chapter" id="navPoint-0" playOrder="1">
-      <navLabel>
-        <text>""")
-        
+  <navMap>""")
+##    with open(directory + folder_name + "mimetype", "w", encoding="utf-8") as file_mimetype:
+##        file_mimetype.write("application/epub+zip")
+    with open(directory + folder_name + "META-INF/container.xml", "w", encoding="utf-8") as file_container:
+        file_container.write("""<?xml version="1.0"?>
+<container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
+	<rootfiles>
+		<rootfile full-path="content.opf" media-type="application/oebps-package+xml"/>
+	</rootfiles>
+</container>""")
+    with open(directory + folder_name + "content.opf", "w", encoding="utf-8") as file_content:
+        file_content.write("""<?xml version='1.0' encoding='UTF-8'?>
+<opf:package version="2.0" unique-identifier="BookId" xmlns:opf="http://www.idpf.org/2007/opf" xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <opf:metadata>
+    <dc:identifier id="BookId" opf:scheme="UUID">""" + uuid_str + """</dc:identifier>
+    <dc:title>""" + title_clean + """</dc:title>
+    <dc:creator opf:role="aut">""" + author_clean + """</dc:creator>
+    <dc:language>en</dc:language>
+    <dc:language>eng</dc:language>
+    <opf:meta name="generator" content="DumbEpub"/>
+    <opf:meta name="cover" content="cover"/>
+  </opf:metadata>
+  <opf:manifest>
+    <opf:item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml"/>
+    <opf:item id="cover" href="cover.jpg" media-type="image/jpeg"/>
+    <opf:item id="cover-page" href="titlepage.xhtml" media-type="application/xhtml+xml"/>""")
+    for i in range(1,len(chapters_downloaded)+1):
+        with open(directory + folder_name + "content.opf", "a", encoding="utf-8") as file_content:
+            file_content.write("""
+    <opf:item id="prov_idx_""" + str(i) + """\" href="OEBPS/chapter_""" + str(i) + """.xhtml" media-type="application/xhtml+xml"/>""")
+    with open(directory + folder_name + "content.opf", "a", encoding="utf-8") as file_content:
+        file_content.write("""
+  </opf:manifest>
+  <opf:spine toc="ncx">""")
+    
+    
     chp = 0
     for chp_id in chapters_downloaded:
         chp += 1
+        chapter_title = "Chapter " + str(chp) + ": " + chapters_html[chp_id][1]
         chapter_html = "<?xml version='1.0' encoding='utf-8'?>\n<html xmlns=\"http://www.w3.org/1999/xhtml\">\n\t\t\t\t<head>\n\t\t\t\t\t<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\"/>\n\t\t\t\t\t<title>Chapter " + str(chp) + ": " + chapters_html[chp_id][1] + "</title>\n\t\t\t\t</head>\n\t\t\t\t<body>\n\t\t\t\t\t<h1>Chapter " + str(chp) + ": " + chapters_html[chp_id][1] + "</h1>\n\t\t\t\t\t" + chapters_html[chp_id][0] + "\n\t\t\t\t</body>\n\t\t\t</html>"
         chapter_file_name = "chapter_"+str(chp)+".xhtml"
         full_path = directory + folder_name + "OEBPS/" + chapter_file_name
         with open(full_path, "w", encoding="utf-8") as file_chapter:
-            file_chapter.write(chapter_html)
-    with open(directory + folder_name + "OEBPS/"+"titlepage.xhtml", "w", encoding="utf-8") as titlepage:
+            file_chapter.write(chapter_html.replace("&","&#38;"))
+        with open(directory + folder_name + "toc.ncx", "a", encoding="utf-8") as file_toc:
+            file_toc.write("""
+    <navPoint class="chapter" id="navPoint-""" + str(chp-1) + """\" playOrder=\"""" + str(chp) + """\">
+      <navLabel>
+        <text>""" + chapter_title.replace("&","&#38;") + """</text>
+      </navLabel>
+      <content src="OEBPS/chapter_""" + str(chp) + """.xhtml"/>
+    </navPoint>""")
+        with open(directory + folder_name + "content.opf", "a", encoding="utf-8") as file_content:
+            file_content.write("""
+    <opf:itemref idref="prov_idx_""" + str(chp) + """\"/>""")
+    with open(directory + folder_name + "content.opf", "a", encoding="utf-8") as file_content:
+            file_content.write("""
+  </opf:spine>
+  <opf:guide>
+    <opf:reference href="titlepage.xhtml" title="Cover" type="cover"/>
+  </opf:guide>
+</opf:package>""")
+    with open(directory + folder_name + "toc.ncx", "a", encoding="utf-8") as file_toc:        
+        file_toc.write("""
+  </navMap>
+</ncx>""")
+    with open(directory + folder_name + "titlepage.xhtml", "w", encoding="utf-8") as titlepage:
         titlepage.write("""<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
     <head>
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
@@ -252,12 +310,43 @@ def save_to_hdd(fiction_html,chapters_html,chapters_downloaded,directory="Fictio
         cover_image_absolute = "https://www.royalroad.com"+cover_image
     else:
         cover_image_absolute = cover_image
-    print(cover_image_absolute)
+    #print(cover_image_absolute)
     image_data = http_client_image.fetch(cover_image_absolute).body
     with open(directory + folder_name + "cover.jpg", "wb") as cover_image_file:
         cover_image_file.write(image_data)
-    
+    output_location = directory
+    folder_location = directory + folder_name
+    compress_and_convert_to_epub(directory,folder_location,output_location)
 
+def compress_and_convert_to_epub(directory,folder_location,output_location):
+    #print(folder_location)
+    new_zip_name = folder_location.split("/")[-2]
+    #print(new_zip_name)
+    output_location = directory+new_zip_name
+    #print(output_location)
+    zip_file_epub = zipfile.ZipFile(directory+new_zip_name+".zip", "w")
+    zip_file_epub.writestr("mimetype", "application/epub+zip")
+    #print(folder_location)
+    #zip_file_epub.write(folder_location, folder_location, zipfile.ZIP_DEFLATED)
+    addFolderToZip(zip_file_epub, folder_location)
+    #make_archive(output_location, 'zip', folder_location)
+    rmtree(folder_location)
+    zip_file_epub.close()
+    try:
+        os.rename(output_location+".zip",output_location+".epub")
+    except Exception as e:
+        print(output_location,"Error",e)
+    print("Saved EPUB:",output_location+".epub")    
+
+def addFolderToZip(zip_file_epub, folder_location):
+    for file in os.listdir(folder_location):
+        full_path = os.path.join(folder_location, file)
+        if os.path.isfile(full_path):
+            #print('File added: ' + str(full_path))
+            zip_file_epub.write(str(full_path), str("/".join(full_path.split("/")[2:])), zipfile.ZIP_DEFLATED)
+        elif os.path.isdir(full_path):
+            #print('Entering folder: ' + str(full_path))
+            addFolderToZip(zip_file_epub, full_path)
 def handle_chapter_response(response):
     if response.code == 599:
         print(response.effective_url,"error")
