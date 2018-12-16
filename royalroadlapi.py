@@ -9,6 +9,36 @@ chapters_downloaded = []
 chapters_html = {}
 fiction_html = ""
 running = False
+directory = "Error/"
+
+def get_fiction(fiction_id,directory="Fictions/"):
+    fiction = get_fiction_object(fiction_id)
+    get_fiction_info(fiction_id)
+    chapter_links = get_chapter_links(fiction)
+    if chapter_links != []:
+        get_chapters(chapter_links,directory)
+    else:
+        print("Fiction {} contains no chapters.".format(fiction_id))
+
+def get_fictions(fiction_id_start=1,fiction_id_end=23000,directory="Fictions/"):
+    try:
+        fiction_id_start = int(fiction_id_start)
+        fiction_id_end = int(fiction_id_end)
+        total = (fiction_id_end-fiction_id_start)+1
+        if (fiction_id_end >= fiction_id_start):
+            for i in range(fiction_id_start,fiction_id_end+1):
+                try:
+                    get_fiction(i,directory)
+                    print("Progress:",str(round((((i-(fiction_id_start))+1)/total)*100,2))+"%")
+                    print("Remaining:",str((total-1)-(i-(fiction_id_start))))
+                except:
+                    print("Fiction {} Not Available.".format(i))
+                    print("Progress:",str(round((((i-(fiction_id_start))+1)/total)*100,2))+"%")
+                    print("Remaining:",str((total-1)-(i-(fiction_id_start))))
+        else:
+            print("Invalid Range.")
+    except:
+        print("Please use valid numbers!")
 
 def get_fiction_object(fiction_id):
     http_client = httpclient.HTTPClient()
@@ -22,6 +52,7 @@ def get_fiction_object(fiction_id):
         return None
     
 def get_fiction_info(fiction_id): #finished
+    global url,title,cover_image,author,description,genres,ratings,stats,chapter_links,chapter_amount
     soup = get_fiction_object(fiction_id)
     if soup:
         url = "https://www.royalroad.com/fiction/"+str(fiction_id)
@@ -122,8 +153,9 @@ def get_chapter_amount(soup):
         chapter_links.append(chapter_link)
     return len(chapter_links)
 
-def get_chapters(chapter_links):
-    global chapters_downloaded,chapters_html,fiction_html
+def get_chapters(chapter_links,directory_loc="Fictions/"):
+    global chapters_downloaded,chapters_html,fiction_html,directory
+    globals()['directory'] = directory_loc #little dodgy
     chapters_downloaded = []
     chapters_html = {}
     fiction_html = ""
@@ -133,7 +165,8 @@ def get_chapters(chapter_links):
         i += 1
         url = "https://www.royalroad.com/"+str(chapter)
         http_client.fetch(url.strip(),handle_chapter_response, method='GET',connect_timeout=10000,request_timeout=10000)
-    ioloop.IOLoop.instance().start()
+    if chapter_links != []:
+        ioloop.IOLoop.instance().start()
 
 def get_chapter_content(html):
     soup = BeautifulSoup(html, "lxml")
@@ -142,7 +175,7 @@ def get_chapter_content(html):
     #print(chapter_title)
     return content_html,chapter_title
 
-def save_to_hdd(fiction_html):
+def save_to_hdd(fiction_html,chapters_html,chapters_downloaded,directory="Fictions/"):
     global url,title,cover_image,author,description,genres,ratings,stats,chapter_links,chapter_amount
     time = datetime.now().strftime("%Y-%m-%d %H:%M")
     genre_html = ""
@@ -156,18 +189,81 @@ def save_to_hdd(fiction_html):
     data = "<link rel='stylesheet' href='styles/tables.css'><center><img src='" + cover_image + "'><b><h1> \"<a href='" + url + "'>" + str(title) + "</a>\" by \"" + str(author) + "\"</h1></b><br>" +"<br><b>" + genre_html + "</b>" + statistics + "<h2>Last updated: " + time + "</h2></center><br><h3>Description: " + str(description) + "</h3><br>" + fiction_html
     title_clean = re.sub(r'[\\/*?:"<>|]',"",title)
     author_clean = re.sub(r'[\\/*?:"<>|]',"",author)
-    print("Saving: " + title_clean + " - " + author_clean + ".html")
-    file_name = title_clean + " - " + author_clean + ".html"
-    full_path = directory + file_name
+    print("Saving: " + directory + title_clean + " - " + author_clean + ".html")
+    name = title_clean + " - " + author_clean
+    folder_name = name + "/"
+    os.makedirs(directory+folder_name+"OEBPS/", exist_ok=True)
+    file_name = name + ".html"
+    full_path = directory + folder_name + file_name
     with open(full_path, "w", encoding="utf-8") as file_webnovel:
         file_webnovel.write(data)
+    print("Saved:",full_path)
+    uid = "test"
+    with open(directory + folder_name + "toc.ncx", "w", encoding="utf-8") as file_toc:
+        file_toc.write("""<?xml version='1.0' encoding='UTF-8'?>
+<ncx version="2005-1" xmlns="http://www.daisy.org/z3986/2005/ncx/">
+  <head>
+    <meta name="dtb:uid" content=\""""+uid+"""\"/>
+    <meta name="dtb:generator" content="DumbEpub"/>
+    <meta name="dtb:depth" content="2"/>
+    <meta name="dtb:totalPageCount" content="0"/>
+    <meta name="dtb:maxPageNumber" content="0"/>
+  </head>
+  <docTitle>
+    <text>"""+str(title)+"""</text>
+  </docTitle>
+  <navMap>
+    <navPoint class="chapter" id="navPoint-0" playOrder="1">
+      <navLabel>
+        <text>""")
+        
+    chp = 0
+    for chp_id in chapters_downloaded:
+        chp += 1
+        chapter_html = "<?xml version='1.0' encoding='utf-8'?>\n<html xmlns=\"http://www.w3.org/1999/xhtml\">\n\t\t\t\t<head>\n\t\t\t\t\t<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\"/>\n\t\t\t\t\t<title>Chapter " + str(chp) + ": " + chapters_html[chp_id][1] + "</title>\n\t\t\t\t</head>\n\t\t\t\t<body>\n\t\t\t\t\t<h1>Chapter " + str(chp) + ": " + chapters_html[chp_id][1] + "</h1>\n\t\t\t\t\t" + chapters_html[chp_id][0] + "\n\t\t\t\t</body>\n\t\t\t</html>"
+        chapter_file_name = "chapter_"+str(chp)+".xhtml"
+        full_path = directory + folder_name + "OEBPS/" + chapter_file_name
+        with open(full_path, "w", encoding="utf-8") as file_chapter:
+            file_chapter.write(chapter_html)
+    with open(directory + folder_name + "OEBPS/"+"titlepage.xhtml", "w", encoding="utf-8") as titlepage:
+        titlepage.write("""<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+        <meta name="calibre:cover" content="true" />
+        <title>Cover</title>
+        <style type="text/css" title="override_css">
+            @page {padding: 0pt; margin:0pt}
+            body { text-align: center; padding:0pt; margin: 0pt; }
+        </style>
+    </head>
+    <body>
+        <div>
+            <svg version="1.1" xmlns="http://www.w3.org/2000/svg"
+                xmlns:xlink="http://www.w3.org/1999/xlink"
+                width="100%" height="100%" viewBox="0 0 600 800"
+                preserveAspectRatio="none">
+                <image width="600" height="800" xlink:href="cover.jpg"/>
+            </svg>
+        </div>
+    </body>
+</html>""")
+    http_client_image = httpclient.HTTPClient()
+    if cover_image == "/Content/Images/rr-placeholder.jpg":
+        cover_image_absolute = "https://www.royalroad.com"+cover_image
+    else:
+        cover_image_absolute = cover_image
+    print(cover_image_absolute)
+    image_data = http_client_image.fetch(cover_image_absolute).body
+    with open(directory + folder_name + "cover.jpg", "wb") as cover_image_file:
+        cover_image_file.write(image_data)
     
+
 def handle_chapter_response(response):
     if response.code == 599:
         print(response.effective_url,"error")
         http_client.fetch(response.effective_url.strip(), handle_request, method='GET',connect_timeout=10000,request_timeout=10000)
     else:
-        global i,chapters_downloaded,chapters_html,fiction_html
+        global i,chapters_downloaded,chapters_html,fiction_html,directory
         html = response.body.decode('utf-8')
         url = response.effective_url
         try:
@@ -186,6 +282,6 @@ def handle_chapter_response(response):
             for chp_id in chapters_downloaded:
                 chp += 1
                 fiction_html = fiction_html + "<center><h1 style='margin-top: 10px' class='font-white'>(" + str(chp) + ") " + chapters_html[chp_id][1] + "</center></h1>" + chapters_html[chp_id][0]
-            save_to_hdd(fiction_html)
+            save_to_hdd(fiction_html,chapters_html,chapters_downloaded,directory)
             ioloop.IOLoop.instance().stop()
 
