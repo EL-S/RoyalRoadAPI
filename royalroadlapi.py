@@ -15,16 +15,17 @@ running = False
 directory = "Error/"
 
 def get_fiction(fiction_id,directory="Fictions/"):
-    fiction = get_fiction_object(fiction_id)
-    get_fiction_info(fiction_id)
-    chapter_links = get_chapter_links(fiction)
+    fiction_object = get_fiction_object(fiction_id)
+    get_fiction_info(fiction_object)
     if chapter_links != []:
         get_chapters(chapter_links,directory)
     else:
         print("Fiction {} contains no chapters.".format(fiction_id))
 
-def get_fictions(fiction_id_start=1,fiction_id_end=23000,directory="Fictions/"):
+def get_fictions(fiction_id_start=1,fiction_id_end=None,directory="Fictions/"):
     try:
+        if fiction_id_end == None:
+            fiction_id_end = find_latest_fiction_id()
         fiction_id_start = int(fiction_id_start)
         fiction_id_end = int(fiction_id_end)
         total = (fiction_id_end-fiction_id_start)+1
@@ -44,20 +45,39 @@ def get_fictions(fiction_id_start=1,fiction_id_end=23000,directory="Fictions/"):
         print("Please use valid numbers!")
 
 def get_fiction_object(fiction_id):
-    http_client = httpclient.HTTPClient()
-    url = "https://www.royalroad.com/fiction/"+str(fiction_id)
-    html = http_client.fetch(url).body.decode('utf-8')
-    soup = BeautifulSoup(html, "lxml")
-    check_active = check_active_fiction(soup,fiction_id)
-    if check_active:
-        return soup
-    else:
-        return None
-    
-def get_fiction_info(fiction_id): #finished
     global url,title,cover_image,author,description,genres,ratings,stats,chapter_links,chapter_amount
-    soup = get_fiction_object(fiction_id)
+    try:
+        url = None
+        title = None
+        cover_image = None
+        author = None
+        description = None
+        genres = None
+        ratings = None
+        stats = None
+        chapter_links = None
+        chapter_amount = None
+    except:
+        pass
+    try:
+        http_client = httpclient.HTTPClient()
+        url = "https://www.royalroad.com/fiction/"+str(fiction_id)
+        html = http_client.fetch(url).body.decode('utf-8')
+        soup = BeautifulSoup(html, "lxml")
+        check_active = check_active_fiction(soup,fiction_id)
+        if check_active:
+            return soup
+        else:
+            return None
+    except httpclient.HTTPError as e:
+        if e.code != 404: #don't know the exact exception code
+            get_fiction_object(fiction_id)
+    
+def get_fiction_info(fiction_obj): #finished
+    global url,title,cover_image,author,description,genres,ratings,stats,chapter_links,chapter_amount
+    soup = fiction_obj
     if soup:
+        fiction_id = get_fiction_id(soup)
         url = "https://www.royalroad.com/fiction/"+str(fiction_id)
         title = get_fiction_title(soup)
         cover_image = get_fiction_cover_image(soup)
@@ -74,11 +94,27 @@ def get_fiction_info(fiction_id): #finished
             return None
         else:
             plural = "s"
-        print("Downloading (" + str(chapter_amount) + " chapter" + plural + "): " + title + " - " + author + ".epub")
+        print("Downloading ({} chapter".format(chapter_amount) + plural + ") ID {}: ".format(fiction_id) + title + " - " + author + ".epub")
         #print(url,title,cover_image,author,description,ratings,chapter_links,chapter_amount)
         return url,title,cover_image,author,description,genres,ratings,stats,chapter_links,chapter_amount
     else:
         return None
+
+def get_fiction_id(soup):
+    fiction_id = soup.find("input", attrs={"name":"id"}).get("value")
+    return fiction_id
+
+def find_latest_fiction_id():
+    try:
+        http_client = httpclient.HTTPClient()
+        url = "https://www.royalroad.com/fictions/new-releases"
+        html = http_client.fetch(url).body.decode('utf-8')
+        soup = BeautifulSoup(html, "lxml")
+        latest_fiction_id = int(soup.find("a",attrs={"class":"font-red-sunglo bold"}).get("href").split("/")[2])
+        return latest_fiction_id
+    except httpclient.HTTPError as e:
+        if e.code != 404: #don't know the exact exception code
+            find_latest_fiction_id()
 
 def check_active_fiction(soup,fiction_id):
     not_active = soup.find('div', attrs={'class': 'number font-red-sunglo'})
@@ -94,8 +130,10 @@ def get_fiction_title(soup): #finished
 
 def get_fiction_cover_image(soup): #finished
     cover_image = soup.find('img', attrs={'property': 'image'}).get('src')
-    if cover_image == "/Content/Images/nocover.png":
-        cover_image = "http://www.royalroadl.com/content/Images/nocover.png"
+    if cover_image.lower() == "/Content/Images/rr-placeholder.jpg".lower():
+        cover_image = "http://www.royalroadl.com/Content/Images/rr-placeholder.jpg"
+    elif cover_image == "undefined":
+        cover_image = "http://www.royalroadl.com/Content/Images/rr-placeholder.jpg"
     return cover_image
 
 def get_fiction_author(soup): #finished
@@ -157,7 +195,7 @@ def get_chapter_amount(soup):
     return len(chapter_links)
 
 def get_chapters(chapter_links,directory_loc="Fictions/"):
-    global chapters_downloaded,chapters_html,fiction_html,directory
+    global chapters_downloaded,chapters_html,fiction_html,directory,http_client
     globals()['directory'] = directory_loc #little dodgy
     chapters_downloaded = []
     chapters_html = {}
@@ -187,9 +225,9 @@ def save_to_hdd(fiction_html,chapters_html,chapters_downloaded,directory="Fictio
             genre_html += genre
         else:
             genre_html += " | " + genre
-    stats_html = "<b><br>Total Views:</b> " + stats[0] + "<b> | Average Views:</b> " + stats[1] + "<b> | Followers:</b> " + stats[2] + "<b> | Favorites:</b> " + stats[3] + "<b> | Pages:</b> " + stats[4]
-    statistics = "<center><b>Chapters:</b> " + str(chapter_amount) + "<b> | Overall Score:</b> " + ratings[0] + "<b> | Best Score:</b> " + ratings[1] + "<b> | Ratings:</b> " + ratings[2] + "<b><br>Style Score:</b> " + ratings[3] + "<b> | Story Score:</b> " + ratings[4] + "<b> | Character Score:</b> " + ratings[5] + "<b> | Grammar Score:</b> " + ratings[6] + stats_html + "</center></p></b>"
-    data = "<link rel='stylesheet' href='tables.css'><center><img src='" + cover_image + "'><b><h1> \"<a href='" + url + "'>" + str(title) + "</a>\" by \"" + str(author) + "\"</h1></b><br>" +"<br><b>" + genre_html + "</b>" + statistics + "<h2>Last updated: " + time + "</h2></center><br><h3>Description: " + str(description) + "</h3><br>"# + fiction_html
+    stats_html = "</p><p><b>Total Views:</b> " + stats[0] + "<b> | Average Views:</b> " + stats[1] + "<b> | Followers:</b> " + stats[2] + "<b> | Favorites:</b> " + stats[3] + "<b> | Pages:</b> " + stats[4]
+    statistics = "<b>Chapters:</b> " + str(chapter_amount) + "<b> | Overall Score:</b> " + ratings[0] + "<b> | Best Score:</b> " + ratings[1] + "<b> | Ratings:</b> " + ratings[2] + "</p><p><b>Style Score:</b> " + ratings[3] + "<b> | Story Score:</b> " + ratings[4] + "<b> | Character Score:</b> " + ratings[5] + "<b> | Grammar Score:</b> " + ratings[6] + stats_html + "</p>"
+    data = "<center><img src='../cover.jpg'></img><p><b><h1> \"<a href='" + url + "'>" + str(title) + "</a>\" by \"" + str(author) + "\"</h1></b></p><p><b>" + genre_html + "</b></p><p>" + statistics + "<p><h2>Last updated: " + time + "</h2></p></center><p><h3>Description:</h3> " + str(description) + "</p>"# + fiction_html
     title_clean = re.sub(r'[\\/*?:"<>|]',"",title)
     author_clean = re.sub(r'[\\/*?:"<>|]',"",author)
     print("Saving EPUB: " + directory + title_clean + " - " + author_clean + ".epub")
@@ -241,17 +279,40 @@ def save_to_hdd(fiction_html,chapters_html,chapters_downloaded,directory="Fictio
   <opf:manifest>
     <opf:item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml"/>
     <opf:item id="cover" href="cover.jpg" media-type="image/jpeg"/>
-    <opf:item id="cover-page" href="titlepage.xhtml" media-type="application/xhtml+xml"/>""")
+    <opf:item id="cover-page" href="titlepage.xhtml" media-type="application/xhtml+xml"/>
+    <opf:item id="prov_idx_1" href="OEBPS/info.xhtml" media-type="application/xhtml+xml"/>""")
     for i in range(1,len(chapters_downloaded)+1):
         with open(directory + folder_name + "content.opf", "a", encoding="utf-8") as file_content:
             file_content.write("""
-    <opf:item id="prov_idx_""" + str(i) + """\" href="OEBPS/chapter_""" + str(i) + """.xhtml" media-type="application/xhtml+xml"/>""")
+    <opf:item id="prov_idx_""" + str(i+1) + """\" href="OEBPS/chapter_""" + str(i) + """.xhtml" media-type="application/xhtml+xml"/>""")
     with open(directory + folder_name + "content.opf", "a", encoding="utf-8") as file_content:
         file_content.write("""
   </opf:manifest>
   <opf:spine toc="ncx">""")
     
-    
+    with open(directory + folder_name + "toc.ncx", "a", encoding="utf-8") as file_toc:
+            file_toc.write("""
+    <navPoint class="chapter" id="navPoint-""" + str(0) + """\" playOrder=\"""" + str(1) + """\">
+      <navLabel>
+        <text>Information</text>
+      </navLabel>
+      <content src="OEBPS/info.xhtml"/>
+    </navPoint>""")
+    full_path = directory + folder_name + "OEBPS/info.xhtml"
+    with open(full_path, "w", encoding="utf-8") as file_info:
+        file_info.write("""<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+				<head>
+					<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+					<title>Information</title>
+				</head>
+				<body>
+					"""+data+"""</body>
+			</html>""")
+    #("tables.css",directory + folder_name + "tables.css") #not needed
+    with open(directory + folder_name + "content.opf", "a", encoding="utf-8") as file_content:
+        file_content.write("""
+    <opf:itemref idref="prov_idx_1\"/>""")
     chp = 0
     for chp_id in chapters_downloaded:
         chp += 1
@@ -263,7 +324,7 @@ def save_to_hdd(fiction_html,chapters_html,chapters_downloaded,directory="Fictio
             file_chapter.write(chapter_html.replace("&","&#38;"))
         with open(directory + folder_name + "toc.ncx", "a", encoding="utf-8") as file_toc:
             file_toc.write("""
-    <navPoint class="chapter" id="navPoint-""" + str(chp-1) + """\" playOrder=\"""" + str(chp) + """\">
+    <navPoint class="chapter" id="navPoint-""" + str(chp) + """\" playOrder=\"""" + str(chp+1) + """\">
       <navLabel>
         <text>""" + chapter_title.replace("&","&#38;") + """</text>
       </navLabel>
@@ -271,7 +332,7 @@ def save_to_hdd(fiction_html,chapters_html,chapters_downloaded,directory="Fictio
     </navPoint>""")
         with open(directory + folder_name + "content.opf", "a", encoding="utf-8") as file_content:
             file_content.write("""
-    <opf:itemref idref="prov_idx_""" + str(chp) + """\"/>""")
+    <opf:itemref idref="prov_idx_""" + str(chp+1) + """\"/>""")
     with open(directory + folder_name + "content.opf", "a", encoding="utf-8") as file_content:
             file_content.write("""
   </opf:spine>
@@ -305,18 +366,21 @@ def save_to_hdd(fiction_html,chapters_html,chapters_downloaded,directory="Fictio
         </div>
     </body>
 </html>""")
-    http_client_image = httpclient.HTTPClient()
-    if cover_image == "/Content/Images/rr-placeholder.jpg":
-        cover_image_absolute = "https://www.royalroad.com"+cover_image
-    else:
-        cover_image_absolute = cover_image
-    #print(cover_image_absolute)
-    image_data = http_client_image.fetch(cover_image_absolute).body
+    image_data = download_image_data(cover_image)
     with open(directory + folder_name + "cover.jpg", "wb") as cover_image_file:
         cover_image_file.write(image_data)
     output_location = directory
     folder_location = directory + folder_name
     compress_and_convert_to_epub(directory,folder_location,output_location)
+
+def download_image_data(cover_image):
+    try:
+        http_client_image = httpclient.HTTPClient()
+        image_data = http_client_image.fetch(cover_image).body
+        return image_data
+    except httpclient.HTTPError as e:
+        if e.code != 404: #don't know the exact exception code
+            download_image_data(cover_image)
 
 def compress_and_convert_to_epub(directory,folder_location,output_location):
     #print(folder_location)
@@ -330,13 +394,24 @@ def compress_and_convert_to_epub(directory,folder_location,output_location):
     #zip_file_epub.write(folder_location, folder_location, zipfile.ZIP_DEFLATED)
     addFolderToZip(zip_file_epub, folder_location)
     #make_archive(output_location, 'zip', folder_location)
-    rmtree(folder_location)
     zip_file_epub.close()
+    remove_dir(folder_location)
+    try: #to prevent file exists error
+        os.remove(output_location+".epub")
+    except:
+        pass
     try:
         os.rename(output_location+".zip",output_location+".epub")
     except Exception as e:
         print(output_location,"Error",e)
     print("Saved EPUB:",output_location+".epub")    
+
+def remove_dir(folder_location):
+    try:
+        rmtree(folder_location)
+    except:
+        os.listdir(folder_location)
+        remove_dir(folder_location)
 
 def addFolderToZip(zip_file_epub, folder_location):
     for file in os.listdir(folder_location):
@@ -348,29 +423,33 @@ def addFolderToZip(zip_file_epub, folder_location):
             #print('Entering folder: ' + str(full_path))
             addFolderToZip(zip_file_epub, full_path)
 def handle_chapter_response(response):
+    global i,chapters_downloaded,chapters_html,fiction_html,directory,http_client
     if response.code == 599:
         print(response.effective_url,"error")
-        http_client.fetch(response.effective_url.strip(), handle_request, method='GET',connect_timeout=10000,request_timeout=10000)
+        http_client.fetch(response.effective_url.strip(), handle_chapter_response, method='GET',connect_timeout=10,request_timeout=10)
     else:
-        global i,chapters_downloaded,chapters_html,fiction_html,directory
         html = response.body.decode('utf-8')
         url = response.effective_url
-        try:
-            chapter_id = int(url.split("/")[-2])
-        except:
-            chapter_id = int(url.split("?")[0].split("/")[-1])
-        chapters_downloaded.append(chapter_id)
-        html = get_chapter_content(html)
-        chapters_html[chapter_id] = html
-        #print(url)
-        i -= 1
-        if i == 0: #all chapters downloaded for the fiction
-            #evoke a function with the complete fiction html
-            chapters_downloaded.sort(key=int)
-            chp = 0
-            for chp_id in chapters_downloaded:
-                chp += 1
-                fiction_html = fiction_html + "<center><h1 style='margin-top: 10px' class='font-white'>(" + str(chp) + ") " + chapters_html[chp_id][1] + "</center></h1>" + chapters_html[chp_id][0]
-            save_to_hdd(fiction_html,chapters_html,chapters_downloaded,directory)
-            ioloop.IOLoop.instance().stop()
+        if "Could not find host | www.royalroad.com | Cloudflare".lower() in html.lower(): #incorrect page
+            print("Cloudflare Problem! Retrying")
+            http_client.fetch(response.effective_url.strip(), handle_chapter_response, method='GET',connect_timeout=10,request_timeout=10)
+        else:
+            try:
+                chapter_id = int(url.split("/")[-2])
+            except:
+                chapter_id = int(url.split("?")[0].split("/")[-1])
+            chapters_downloaded.append(chapter_id)
+            html = get_chapter_content(html)
+            chapters_html[chapter_id] = html
+            #print(url)
+            i -= 1
+            if i == 0: #all chapters downloaded for the fiction
+                #evoke a function with the complete fiction html
+                chapters_downloaded.sort(key=int)
+                chp = 0
+                for chp_id in chapters_downloaded:
+                    chp += 1
+                    fiction_html = fiction_html + "<center><h1 style='margin-top: 10px' class='font-white'>(" + str(chp) + ") " + chapters_html[chp_id][1] + "</center></h1>" + chapters_html[chp_id][0]
+                save_to_hdd(fiction_html,chapters_html,chapters_downloaded,directory)
+                ioloop.IOLoop.instance().stop()
 
