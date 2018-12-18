@@ -422,6 +422,7 @@ def addFolderToZip(zip_file_epub, folder_location):
         elif os.path.isdir(full_path):
             #print('Entering folder: ' + str(full_path))
             addFolderToZip(zip_file_epub, full_path)
+            
 def handle_chapter_response(response):
     global i,chapters_downloaded,chapters_html,fiction_html,directory,http_client
     if response.code == 599:
