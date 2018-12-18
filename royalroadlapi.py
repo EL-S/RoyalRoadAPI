@@ -6,6 +6,7 @@ import os
 import uuid
 from shutil import copyfile, make_archive, rmtree
 import zipfile
+import base64
 
 i = 0
 chapters_downloaded = []
@@ -230,6 +231,8 @@ def save_to_hdd(fiction_html,chapters_html,chapters_downloaded,directory="Fictio
     data = "<center><img src='../cover.jpg'></img><p><b><h1> \"<a href='" + url + "'>" + str(title) + "</a>\" by \"" + str(author) + "\"</h1></b></p><p><b>" + genre_html + "</b></p><p>" + statistics + "<p><h2>Last updated: " + time + "</h2></p></center><p><h3>Description:</h3> " + str(description) + "</p>"# + fiction_html
     title_clean = re.sub(r'[\\/*?:"<>|]',"",title)
     author_clean = re.sub(r'[\\/*?:"<>|]',"",author)
+    if author_clean[-1] == ".":
+        author_clean = author_clean.replace(".","dot")
     print("Saving EPUB: " + directory + title_clean + " - " + author_clean + ".epub")
     name = title_clean + " - " + author_clean
     folder_name = name + "/"
@@ -366,7 +369,12 @@ def save_to_hdd(fiction_html,chapters_html,chapters_downloaded,directory="Fictio
         </div>
     </body>
 </html>""")
-    image_data = download_image_data(cover_image)
+    if (cover_image.split(",")[0] != "data:image/jpeg;base64") and (cover_image.split(",")[0] != "data:image/gif;base64") and (cover_image.split(",")[0] != "data:image/png;base64"):
+        image_data = download_image_data(cover_image)
+    else:
+        image_data = base64.b64decode(cover_image.split(",")[1])
+        with open('cover.jpg', 'wb') as file:
+            file.write(image_data)
     with open(directory + folder_name + "cover.jpg", "wb") as cover_image_file:
         cover_image_file.write(image_data)
     output_location = directory
@@ -422,7 +430,6 @@ def addFolderToZip(zip_file_epub, folder_location):
         elif os.path.isdir(full_path):
             #print('Entering folder: ' + str(full_path))
             addFolderToZip(zip_file_epub, full_path)
-            
 def handle_chapter_response(response):
     global i,chapters_downloaded,chapters_html,fiction_html,directory,http_client
     if response.code == 599:
