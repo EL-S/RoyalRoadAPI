@@ -14,14 +14,41 @@ chapters_html = {}
 fiction_html = ""
 running = False
 directory = "Error/"
+epub_index_start = 1
 
-def get_fiction(fiction_id,directory="Fictions/"):
+def get_fiction(fiction_id,directory="Fictions/",start_chapter="first",end_chapter="last"):
+    global epub_index_start
     fiction_object = get_fiction_object(fiction_id)
     get_fiction_info(fiction_object)
-    if chapter_links != []:
-        get_chapters(chapter_links,directory)
+    try:
+        end_chapter = int(end_chapter)
+        if end_chapter <= 0:
+            end_chapter = 1
+    except:
+        end_chapter = chapter_amount
+    try:
+        start_chapter = abs(int(start_chapter))
+        if start_chapter != 0:
+            start_chapter = start_chapter - 1
+        if start_chapter < 0:
+            start_chapter = 0
+    except:
+        start_chapter = 0
+    epub_index_start = start_chapter + 1
+    chapter_links_approved = chapter_links[start_chapter:end_chapter]
+    downloading_chapter_amount = len(chapter_links_approved)
+    if chapter_links_approved != []:
+        if downloading_chapter_amount == 1:
+            plural = ""
+        else:
+            plural = "s"
+        print("Downloading ({} chapter".format(str(downloading_chapter_amount)+"/"+str(chapter_amount)) + plural + ") ID {}: ".format(fiction_id) + title + " - " + author + ".epub")
+        get_chapters(chapter_links_approved,directory)
     else:
-        print("Fiction {} contains no chapters.".format(fiction_id))
+        if chapter_links == []:
+            print("Fiction {} contains no chapters.".format(fiction_id))
+        else:
+            print("Fiction {} contains no chapters in the given range".format(fiction_id),str(epub_index_start)+"-"+str(end_chapter)+".")
 
 def get_fictions(fiction_id_start=1,fiction_id_end=None,directory="Fictions/"):
     try:
@@ -89,13 +116,6 @@ def get_fiction_info(fiction_obj): #finished
         stats = get_fiction_statistics(soup)
         chapter_links = get_chapter_links(soup)
         chapter_amount = len(chapter_links)
-        if chapter_amount == 1:
-            plural = ""
-        elif chapter_amount == 0:
-            return None
-        else:
-            plural = "s"
-        print("Downloading ({} chapter".format(chapter_amount) + plural + ") ID {}: ".format(fiction_id) + title + " - " + author + ".epub")
         #print(url,title,cover_image,author,description,ratings,chapter_links,chapter_amount)
         return url,title,cover_image,author,description,genres,ratings,stats,chapter_links,chapter_amount
     else:
@@ -218,7 +238,7 @@ def get_chapter_content(html):
     return content_html,chapter_title
 
 def save_to_hdd(fiction_html,chapters_html,chapters_downloaded,directory="Fictions/"):
-    global url,title,cover_image,author,description,genres,ratings,stats,chapter_links,chapter_amount
+    global url,title,cover_image,author,description,genres,ratings,stats,chapter_links,chapter_amount,epub_index_start
     time = datetime.now().strftime("%Y-%m-%d %H:%M")
     genre_html = ""
     for genre in genres:
@@ -230,9 +250,17 @@ def save_to_hdd(fiction_html,chapters_html,chapters_downloaded,directory="Fictio
     statistics = "<b>Chapters:</b> " + str(chapter_amount) + "<b> | Overall Score:</b> " + ratings[0] + "<b> | Best Score:</b> " + ratings[1] + "<b> | Ratings:</b> " + ratings[2] + "</p><p><b>Style Score:</b> " + ratings[3] + "<b> | Story Score:</b> " + ratings[4] + "<b> | Character Score:</b> " + ratings[5] + "<b> | Grammar Score:</b> " + ratings[6] + stats_html + "</p>"
     data = "<center><img src='../cover.jpg'></img><p><b><h1> \"<a href='" + url + "'>" + str(title) + "</a>\" by \"" + str(author) + "\"</h1></b></p><p><b>" + genre_html + "</b></p><p>" + statistics + "<p><h2>Last updated: " + time + "</h2></p></center><p><h3>Description:</h3> " + str(description) + "</p>"# + fiction_html
     title_clean = re.sub(r'[\\/*?:"<>|]',"",title)
+    try:
+        if author[-1] == "?":
+            author = author.replace("?","qstnmrk")
+    except:
+        author = "Unknown"
     author_clean = re.sub(r'[\\/*?:"<>|]',"",author)
-    if author_clean[-1] == ".":
-        author_clean = author_clean.replace(".","dot")
+    try:
+        if author_clean[-1] == ".":
+            author_clean = author_clean.replace(".","dot")
+    except:
+        author_clean = "Unknown"
     print("Saving EPUB: " + directory + title_clean + " - " + author_clean + ".epub")
     name = title_clean + " - " + author_clean
     folder_name = name + "/"
@@ -284,7 +312,7 @@ def save_to_hdd(fiction_html,chapters_html,chapters_downloaded,directory="Fictio
     <opf:item id="cover" href="cover.jpg" media-type="image/jpeg"/>
     <opf:item id="cover-page" href="titlepage.xhtml" media-type="application/xhtml+xml"/>
     <opf:item id="prov_idx_1" href="OEBPS/info.xhtml" media-type="application/xhtml+xml"/>""")
-    for i in range(1,len(chapters_downloaded)+1):
+    for i in range(epub_index_start,epub_index_start+len(chapters_downloaded)): #maybe wrong
         with open(directory + folder_name + "content.opf", "a", encoding="utf-8") as file_content:
             file_content.write("""
     <opf:item id="prov_idx_""" + str(i+1) + """\" href="OEBPS/chapter_""" + str(i) + """.xhtml" media-type="application/xhtml+xml"/>""")
@@ -316,7 +344,7 @@ def save_to_hdd(fiction_html,chapters_html,chapters_downloaded,directory="Fictio
     with open(directory + folder_name + "content.opf", "a", encoding="utf-8") as file_content:
         file_content.write("""
     <opf:itemref idref="prov_idx_1\"/>""")
-    chp = 0
+    chp = epub_index_start - 1 #maybe wrong
     for chp_id in chapters_downloaded:
         chp += 1
         chapter_title = "Chapter " + str(chp) + ": " + chapters_html[chp_id][1]
@@ -371,12 +399,24 @@ def save_to_hdd(fiction_html,chapters_html,chapters_downloaded,directory="Fictio
 </html>""")
     if (cover_image.split(",")[0] != "data:image/jpeg;base64") and (cover_image.split(",")[0] != "data:image/gif;base64") and (cover_image.split(",")[0] != "data:image/png;base64"):
         image_data = download_image_data(cover_image)
+        if image_data == None:
+            image_data = download_image_data("http://www.royalroadl.com/Content/Images/rr-placeholder.jpg")
     else:
-        image_data = base64.b64decode(cover_image.split(",")[1])
+##        image_data = cover_image.split(",")[1]
+##        image_data += "=" * ((4 - len(image_data) % 4) % 4)
+        try:
+            image_data = base64.b64decode(image_data)
+        except:
+            image_data = download_image_data("http://www.royalroadl.com/Content/Images/rr-placeholder.jpg")
         with open('cover.jpg', 'wb') as file:
             file.write(image_data)
-    with open(directory + folder_name + "cover.jpg", "wb") as cover_image_file:
-        cover_image_file.write(image_data)
+    try:
+        with open(directory + folder_name + "cover.jpg", "wb") as cover_image_file:
+            cover_image_file.write(image_data)
+    except:
+        image_data = download_image_data("http://www.royalroadl.com/Content/Images/rr-placeholder.jpg")
+        with open(directory + folder_name + "cover.jpg", "wb") as cover_image_file:
+            cover_image_file.write(image_data)
     output_location = directory
     folder_location = directory + folder_name
     compress_and_convert_to_epub(directory,folder_location,output_location)
@@ -386,11 +426,17 @@ def download_image_data(cover_image):
         http_client_image = httpclient.HTTPClient()
         image_data = http_client_image.fetch(cover_image).body
         return image_data
-    except httpclient.HTTPError as e:
-        if e.code != 404: #don't know the exact exception code
-            download_image_data(cover_image)
+    except Exception as e: #httpclient.HTTPError as e:
+        try:
+            if e.code != 404: #don't know the exact exception code
+                download_image_data(cover_image)
+        except:
+            download_image_data(cover_image) 
+
+
 
 def compress_and_convert_to_epub(directory,folder_location,output_location):
+    global final_location
     #print(folder_location)
     new_zip_name = folder_location.split("/")[-2]
     #print(new_zip_name)
@@ -412,7 +458,8 @@ def compress_and_convert_to_epub(directory,folder_location,output_location):
         os.rename(output_location+".zip",output_location+".epub")
     except Exception as e:
         print(output_location,"Error",e)
-    print("Saved EPUB:",output_location+".epub")    
+    final_location = output_location+".epub"
+    print("Saved EPUB:",final_location)    
 
 def remove_dir(folder_location):
     try:
