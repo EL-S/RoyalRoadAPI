@@ -47,7 +47,7 @@ def get_fiction(fiction_id,directory="Fictions/",start_chapter="first",end_chapt
             end_chapter = chapter_amount
         if start_chapter > chapter_amount:
             start_chapter = chapter_amount
-        if downloading_chapter_amount != chapter_links:
+        if downloading_chapter_amount != chapter_amount:
             file_name_chapter_range = " "+str(epub_index_start)+"-"+str(end_chapter)
         else:
             file_name_chapter_range = ""
@@ -114,7 +114,7 @@ def search_fiction(search_term):
         if e.code != 404: #don't know the exact exception code
             search_fiction(search_term)
 
-def get_fiction_location(fiction_id,directory="Fictions/"):
+def get_fiction_location(fiction_id,directory="Fictions/",start_chapter="first",end_chapter="last"):
     try:
         int(fiction_id)
     except:
@@ -123,12 +123,44 @@ def get_fiction_location(fiction_id,directory="Fictions/"):
     fiction_object = get_fiction_object(fiction_id)
     get_fiction_info(fiction_object)
     try:
-        final_location = determine_file_location(title,directory,author)
+        end_chapter = int(end_chapter)
+        if end_chapter <= 0:
+            end_chapter = 1
+    except:
+        end_chapter = chapter_amount
+    try:
+        start_chapter = int(start_chapter)
+        if start_chapter != 0:
+            start_chapter = start_chapter - 1
+        if start_chapter < 0:
+            start_chapter = 0
+    except:
+        start_chapter = 0
+    epub_index_start = start_chapter + 1
+    chapter_links_approved = chapter_links[start_chapter:end_chapter]
+    downloading_chapter_amount = len(chapter_links_approved)
+    if chapter_links_approved != []:
+        if downloading_chapter_amount == 1:
+            plural = ""
+        else:
+            plural = "s"
+        if end_chapter > chapter_amount:
+            end_chapter = chapter_amount
+        if start_chapter > chapter_amount:
+            start_chapter = chapter_amount
+        if downloading_chapter_amount != chapter_amount:
+            file_name_chapter_range = " "+str(epub_index_start)+"-"+str(end_chapter)
+        else:
+            file_name_chapter_range = ""
+    else: #maybe?
+        file_name_chapter_range = ""
+    try:
+        final_location = determine_file_location(title,directory,author,file_name_chapter_range)
     except:
         final_location = None
     return final_location
 
-def determine_file_location(title,directory,author):
+def determine_file_location(title,directory,author,file_name_chapter_range):
     title = re.sub(r'[\\/*?:"<>|]',"",re.sub(r'[<>]',"",title).strip()).strip() #to prevent breaking the xhtml because it does
     try:
         if author[-1] == "?":
@@ -141,7 +173,7 @@ def determine_file_location(title,directory,author):
             author = author.replace(".","dot").strip()
     except:
         author = "Unknown"
-    final_location = directory + title + " - " + author + ".epub"
+    final_location = directory + title + " - " + author + file_name_chapter_range + ".epub"
     return final_location
 
 def get_fiction_object(fiction_id):
