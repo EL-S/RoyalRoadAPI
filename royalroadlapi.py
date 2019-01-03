@@ -18,7 +18,12 @@ epub_index_start = 1
 file_name_chapter_range = ""
 
 def get_fiction(fiction_id,directory="Fictions/",start_chapter="first",end_chapter="last"):
-    global epub_index_start,file_name_chapter_range
+    global epub_index_start,file_name_chapter_range,final_location
+    try:
+        int(fiction_id)
+    except:
+        search_term = fiction_id
+        fiction_id = search_fiction(search_term)
     fiction_object = get_fiction_object(fiction_id)
     get_fiction_info(fiction_object)
     try:
@@ -48,11 +53,15 @@ def get_fiction(fiction_id,directory="Fictions/",start_chapter="first",end_chapt
         if start_chapter > chapter_amount:
             start_chapter = chapter_amount
         if downloading_chapter_amount != chapter_amount:
-            file_name_chapter_range = " "+str(epub_index_start)+"-"+str(end_chapter)
+            if epub_index_start != end_chapter:
+                file_name_chapter_range = " "+str(epub_index_start)+"-"+str(end_chapter)
+            else:
+                file_name_chapter_range = " "+str(epub_index_start)
         else:
             file_name_chapter_range = ""
         print("Downloading ({} chapter".format(str(downloading_chapter_amount)+"/"+str(chapter_amount)) + plural + ") ID {}: ".format(fiction_id) + title + " - " + author + file_name_chapter_range + ".epub")
         get_chapters(chapter_links_approved,directory)
+        return final_location
     else:
         if chapter_links == []:
             print("Fiction {} contains no chapters.".format(fiction_id))
@@ -149,7 +158,10 @@ def get_fiction_location(fiction_id,directory="Fictions/",start_chapter="first",
         if start_chapter > chapter_amount:
             start_chapter = chapter_amount
         if downloading_chapter_amount != chapter_amount:
-            file_name_chapter_range = " "+str(epub_index_start)+"-"+str(end_chapter)
+            if epub_index_start != end_chapter:
+                file_name_chapter_range = " "+str(epub_index_start)+"-"+str(end_chapter)
+            else:
+                file_name_chapter_range = " "+str(epub_index_start)
         else:
             file_name_chapter_range = ""
     else: #maybe?
@@ -321,6 +333,7 @@ def get_chapters(chapter_links,directory_loc="Fictions/"):
         http_client.fetch(url.strip(),handle_chapter_response, method='GET',connect_timeout=10000,request_timeout=10000)
     if chapter_links != []:
         ioloop.IOLoop.instance().start()
+        save_to_hdd(fiction_html,chapters_html,chapters_downloaded,directory)
 
 def get_chapter_content(html):
     soup = BeautifulSoup(html, "lxml")
@@ -595,6 +608,5 @@ def handle_chapter_response(response):
                 for chp_id in chapters_downloaded:
                     chp += 1
                     fiction_html = fiction_html + "<center><h1 style='margin-top: 10px' class='font-white'>(" + str(chp) + ") " + chapters_html[chp_id][1] + "</center></h1>" + chapters_html[chp_id][0]
-                save_to_hdd(fiction_html,chapters_html,chapters_downloaded,directory)
                 ioloop.IOLoop.instance().stop()
 
