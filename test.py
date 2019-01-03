@@ -5,3 +5,8 @@ from royalroadlapi import *
 
 #get_fictions("11343","11343",directory="Fiction - Epubs/")
 get_fiction("8894",directory="Fiction - Epubs/",start_chapter="1",end_chapter="5")
+get_fiction("8894",directory="Fiction - Epubs/",start_chapter="2",end_chapter="5")
+get_fiction("8894",directory="Fiction - Epubs/",start_chapter="3",end_chapter="900")
+get_fiction("8894",directory="Fiction - Epubs/",start_chapter="3")
+get_fiction("8894",directory="Fiction - Epubs/",start_chapter="800",end_chapter="900")
+get_fiction("8894",directory="Fiction - Epubs/",start_chapter="-20",end_chapter="900")

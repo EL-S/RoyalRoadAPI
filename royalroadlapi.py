@@ -15,9 +15,10 @@ fiction_html = ""
 running = False
 directory = "Error/"
 epub_index_start = 1
+file_name_chapter_range = ""
 
 def get_fiction(fiction_id,directory="Fictions/",start_chapter="first",end_chapter="last"):
-    global epub_index_start
+    global epub_index_start,file_name_chapter_range
     fiction_object = get_fiction_object(fiction_id)
     get_fiction_info(fiction_object)
     try:
@@ -27,7 +28,7 @@ def get_fiction(fiction_id,directory="Fictions/",start_chapter="first",end_chapt
     except:
         end_chapter = chapter_amount
     try:
-        start_chapter = abs(int(start_chapter))
+        start_chapter = int(start_chapter)
         if start_chapter != 0:
             start_chapter = start_chapter - 1
         if start_chapter < 0:
@@ -42,7 +43,15 @@ def get_fiction(fiction_id,directory="Fictions/",start_chapter="first",end_chapt
             plural = ""
         else:
             plural = "s"
-        print("Downloading ({} chapter".format(str(downloading_chapter_amount)+"/"+str(chapter_amount)) + plural + ") ID {}: ".format(fiction_id) + title + " - " + author + ".epub")
+        if end_chapter > chapter_amount:
+            end_chapter = chapter_amount
+        if start_chapter > chapter_amount:
+            start_chapter = chapter_amount
+        if downloading_chapter_amount != chapter_links:
+            file_name_chapter_range = " "+str(epub_index_start)+"-"+str(end_chapter)
+        else:
+            file_name_chapter_range = ""
+        print("Downloading ({} chapter".format(str(downloading_chapter_amount)+"/"+str(chapter_amount)) + plural + ") ID {}: ".format(fiction_id) + title + " - " + author + file_name_chapter_range + ".epub")
         get_chapters(chapter_links_approved,directory)
     else:
         if chapter_links == []:
@@ -71,6 +80,69 @@ def get_fictions(fiction_id_start=1,fiction_id_end=None,directory="Fictions/"):
             print("Invalid Range.")
     except:
         print("Please use valid numbers!")
+
+def find_latest_fiction_id():
+    try:
+        http_client = httpclient.HTTPClient()
+        url = "https://www.royalroad.com/fictions/new-releases"
+        html = http_client.fetch(url).body.decode('utf-8')
+        soup = BeautifulSoup(html, "lxml")
+        latest_fiction_id = int(soup.find("a",attrs={"class":"font-red-sunglo bold"}).get("href").split("/")[2])
+        return latest_fiction_id
+    except httpclient.HTTPError as e:
+        if e.code != 404: #don't know the exact exception code
+            find_latest_fiction_id()
+
+def search_fiction(search_term):
+    search_term = search_term.replace(" ","+")
+    url = "https://www.royalroad.com/fictions/search?name="+str(search_term)
+    print(url)
+    try:
+        http_client = httpclient.HTTPClient()
+        html = http_client.fetch(url).body.decode('utf-8')
+        soup = BeautifulSoup(html, "lxml")
+        #print(soup)
+        try:
+            fiction_id = soup.find("div", attrs={"class":"col-sm-8 col-xs-10 search-content"}).find("input").get("id").split("-")[1]
+        except Exception as e:
+            print(e)
+        if fiction_id:
+            return fiction_id
+        else:
+            return None
+    except httpclient.HTTPError as e:
+        if e.code != 404: #don't know the exact exception code
+            search_fiction(search_term)
+
+def get_fiction_location(fiction_id,directory="Fictions/"):
+    try:
+        int(fiction_id)
+    except:
+        search_term = fiction_id
+        fiction_id = search_fiction(search_term)
+    fiction_object = get_fiction_object(fiction_id)
+    get_fiction_info(fiction_object)
+    try:
+        final_location = determine_file_location(title,directory,author)
+    except:
+        final_location = None
+    return final_location
+
+def determine_file_location(title,directory,author):
+    title = re.sub(r'[\\/*?:"<>|]',"",re.sub(r'[<>]',"",title).strip()).strip() #to prevent breaking the xhtml because it does
+    try:
+        if author[-1] == "?":
+            author = author.replace("?","qstnmrk") #to prevent an empty name after the next regex that removes them
+    except:
+        author = "Unknown"
+    author = re.sub(r'[\\/*?:"<>|]',"",author).strip()
+    try:
+        if author[-1] == ".":
+            author = author.replace(".","dot").strip()
+    except:
+        author = "Unknown"
+    final_location = directory + title + " - " + author + ".epub"
+    return final_location
 
 def get_fiction_object(fiction_id):
     global url,title,cover_image,author,description,genres,ratings,stats,chapter_links,chapter_amount
@@ -124,18 +196,6 @@ def get_fiction_info(fiction_obj): #finished
 def get_fiction_id(soup):
     fiction_id = soup.find("input", attrs={"name":"id"}).get("value")
     return fiction_id
-
-def find_latest_fiction_id():
-    try:
-        http_client = httpclient.HTTPClient()
-        url = "https://www.royalroad.com/fictions/new-releases"
-        html = http_client.fetch(url).body.decode('utf-8')
-        soup = BeautifulSoup(html, "lxml")
-        latest_fiction_id = int(soup.find("a",attrs={"class":"font-red-sunglo bold"}).get("href").split("/")[2])
-        return latest_fiction_id
-    except httpclient.HTTPError as e:
-        if e.code != 404: #don't know the exact exception code
-            find_latest_fiction_id()
 
 def check_active_fiction(soup,fiction_id):
     not_active = soup.find('div', attrs={'class': 'number font-red-sunglo'})
@@ -261,8 +321,8 @@ def save_to_hdd(fiction_html,chapters_html,chapters_downloaded,directory="Fictio
             author_clean = author_clean.replace(".","dot")
     except:
         author_clean = "Unknown"
-    print("Saving EPUB: " + directory + title_clean + " - " + author_clean + ".epub")
-    name = title_clean + " - " + author_clean
+    print("Saving EPUB: " + directory + title_clean + " - " + author_clean + file_name_chapter_range + ".epub")
+    name = title_clean + " - " + author_clean + file_name_chapter_range
     folder_name = name + "/"
     os.makedirs(directory+folder_name+"OEBPS/", exist_ok=True)
     os.makedirs(directory+folder_name+"META-INF/", exist_ok=True)
@@ -432,8 +492,6 @@ def download_image_data(cover_image):
                 download_image_data(cover_image)
         except:
             download_image_data(cover_image) 
-
-
 
 def compress_and_convert_to_epub(directory,folder_location,output_location):
     global final_location
