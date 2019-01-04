@@ -26,39 +26,12 @@ def get_fiction(fiction_id,directory="Fictions/",start_chapter="first",end_chapt
         fiction_id = search_fiction(search_term)
     fiction_object = get_fiction_object(fiction_id)
     get_fiction_info(fiction_object)
-    try:
-        end_chapter = int(end_chapter)
-        if end_chapter <= 0:
-            end_chapter = 1
-    except:
-        end_chapter = chapter_amount
-    try:
-        start_chapter = int(start_chapter)
-        if start_chapter != 0:
-            start_chapter = start_chapter - 1
-        if start_chapter < 0:
-            start_chapter = 0
-    except:
-        start_chapter = 0
-    epub_index_start = start_chapter + 1
+    start_chapter,end_chapter,epub_index_start = get_chapter_range(start_chapter,end_chapter)
     chapter_links_approved = chapter_links[start_chapter:end_chapter]
-    downloading_chapter_amount = len(chapter_links_approved)
     if chapter_links_approved != []:
-        if downloading_chapter_amount == 1:
-            plural = ""
-        else:
-            plural = "s"
-        if end_chapter > chapter_amount:
-            end_chapter = chapter_amount
-        if start_chapter > chapter_amount:
-            start_chapter = chapter_amount
-        if downloading_chapter_amount != chapter_amount:
-            if epub_index_start != end_chapter:
-                file_name_chapter_range = " "+str(epub_index_start)+"-"+str(end_chapter)
-            else:
-                file_name_chapter_range = " "+str(epub_index_start)
-        else:
-            file_name_chapter_range = ""
+        downloading_chapter_amount = len(chapter_links_approved)
+        chapter_amount = len(chapter_links)
+        start_chapter,end_chapter,epub_index_start,chapter_amount,downloading_chapter_amount,file_name_chapter_range,plural = chapter_range_string_expressions(start_chapter,end_chapter,epub_index_start,chapter_amount,downloading_chapter_amount)
         print("Downloading ({} chapter".format(str(downloading_chapter_amount)+"/"+str(chapter_amount)) + plural + ") ID {}: ".format(fiction_id) + title + " - " + author + file_name_chapter_range + ".epub")
         get_chapters(chapter_links_approved,directory)
         return final_location
@@ -102,6 +75,42 @@ def find_latest_fiction_id():
         if e.code != 404: #don't know the exact exception code
             find_latest_fiction_id()
 
+def get_chapter_range(start_chapter,end_chapter):
+    try:
+        end_chapter = int(end_chapter)
+        if end_chapter <= 0:
+            end_chapter = 1
+    except:
+        end_chapter = chapter_amount
+    try:
+        start_chapter = int(start_chapter)
+        if start_chapter != 0:
+            start_chapter = start_chapter - 1
+        if start_chapter < 0:
+            start_chapter = 0
+    except:
+        start_chapter = 0
+    epub_index_start = start_chapter + 1
+    return start_chapter,end_chapter,epub_index_start
+
+def chapter_range_string_expressions(start_chapter,end_chapter,epub_index_start,chapter_amount,downloading_chapter_amount):
+    if downloading_chapter_amount == 1:
+        plural = ""
+    else:
+        plural = "s"
+    if end_chapter > chapter_amount:
+        end_chapter = chapter_amount
+    if start_chapter > chapter_amount:
+        start_chapter = chapter_amount
+    if downloading_chapter_amount != chapter_amount:
+        if epub_index_start != end_chapter:
+            file_name_chapter_range = " "+str(epub_index_start)+"-"+str(end_chapter)
+        else:
+            file_name_chapter_range = " "+str(epub_index_start)
+    else:
+        file_name_chapter_range = ""
+    return start_chapter,end_chapter,epub_index_start,chapter_amount,downloading_chapter_amount,file_name_chapter_range,plural
+
 def search_fiction(search_term):
     search_term = search_term.replace(" ","+")
     url = "https://www.royalroad.com/fictions/search?name="+str(search_term)
@@ -131,39 +140,12 @@ def get_fiction_location(fiction_id,directory="Fictions/",start_chapter="first",
         fiction_id = search_fiction(search_term)
     fiction_object = get_fiction_object(fiction_id)
     get_fiction_info(fiction_object)
-    try:
-        end_chapter = int(end_chapter)
-        if end_chapter <= 0:
-            end_chapter = 1
-    except:
-        end_chapter = chapter_amount
-    try:
-        start_chapter = int(start_chapter)
-        if start_chapter != 0:
-            start_chapter = start_chapter - 1
-        if start_chapter < 0:
-            start_chapter = 0
-    except:
-        start_chapter = 0
-    epub_index_start = start_chapter + 1
+    start_chapter,end_chapter,epub_index_start = get_chapter_range(start_chapter,end_chapter)
     chapter_links_approved = chapter_links[start_chapter:end_chapter]
     downloading_chapter_amount = len(chapter_links_approved)
+    chapter_amount = len(chapter_links)
     if chapter_links_approved != []:
-        if downloading_chapter_amount == 1:
-            plural = ""
-        else:
-            plural = "s"
-        if end_chapter > chapter_amount:
-            end_chapter = chapter_amount
-        if start_chapter > chapter_amount:
-            start_chapter = chapter_amount
-        if downloading_chapter_amount != chapter_amount:
-            if epub_index_start != end_chapter:
-                file_name_chapter_range = " "+str(epub_index_start)+"-"+str(end_chapter)
-            else:
-                file_name_chapter_range = " "+str(epub_index_start)
-        else:
-            file_name_chapter_range = ""
+        start_chapter,end_chapter,epub_index_start,chapter_amount,downloading_chapter_amount,file_name_chapter_range,plural = chapter_range_string_expressions(start_chapter,end_chapter,epub_index_start,chapter_amount,downloading_chapter_amount)
     else: #maybe?
         file_name_chapter_range = ""
     try:
