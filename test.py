@@ -10,6 +10,9 @@ print(get_fiction_location("8894",directory="Fiction - Epubs/",start_chapter="1"
 
 get_fiction("8894",directory="Fiction - Epubs/")
 get_fiction("8894",directory="Fiction - Epubs/",start_chapter="1",end_chapter="5")
+get_fiction("8894",directory="Fiction - Epubs/",start_chapter="5",end_chapter="5")
+get_fiction("8894",directory="Fiction - Epubs/",start_chapter="307",end_chapter="307")
+get_fiction("8894",directory="Fiction - Epubs/",start_chapter="1",end_chapter="1")
 ##get_fiction("8894",directory="Fiction - Epubs/",start_chapter="2",end_chapter="5")
 ##get_fiction("8894",directory="Fiction - Epubs/",start_chapter="3",end_chapter="900")
 ##get_fiction("8894",directory="Fiction - Epubs/",start_chapter="3")

@@ -18,7 +18,7 @@ epub_index_start = 1
 file_name_chapter_range = ""
 
 def get_fiction(fiction_id,directory="Fictions/",start_chapter="first",end_chapter="last"):
-    global epub_index_start,file_name_chapter_range,final_location
+    global epub_index_start,file_name_chapter_range,final_location,plural
     try:
         int(fiction_id)
     except:
@@ -32,7 +32,12 @@ def get_fiction(fiction_id,directory="Fictions/",start_chapter="first",end_chapt
         downloading_chapter_amount = len(chapter_links_approved)
         chapter_amount = len(chapter_links)
         start_chapter,end_chapter,epub_index_start,chapter_amount,downloading_chapter_amount,file_name_chapter_range,plural = chapter_range_string_expressions(start_chapter,end_chapter,epub_index_start,chapter_amount,downloading_chapter_amount)
-        print("Downloading ({} chapter".format(str(downloading_chapter_amount)+"/"+str(chapter_amount)) + plural + ") ID {}: ".format(fiction_id) + title + " - " + author + file_name_chapter_range + ".epub")
+        if file_name_chapter_range != "":
+            downloading_chapter_str = "chapter"+plural+file_name_chapter_range+", "+str(downloading_chapter_amount)+"/"+str(chapter_amount)
+        else:
+            downloading_chapter_str = "chapter"+plural+" "+"1-" + str(chapter_amount)+", "+str(downloading_chapter_amount)+"/"+str(chapter_amount)
+        #print("Downloading ({} chapter".format(str(downloading_chapter_amount)+"/"+str(chapter_amount)) + plural + ") ID {}: ".format(fiction_id) + title + " - " + author + file_name_chapter_range + ".epub")
+        print("Downloading ({}".format(downloading_chapter_str) + ") ID {}: ".format(fiction_id) + title + " - " + author + file_name_chapter_range + ".epub")
         get_chapters(chapter_links_approved,directory)
         return final_location
     else:
@@ -325,7 +330,7 @@ def get_chapter_content(html):
     return content_html,chapter_title
 
 def save_to_hdd(fiction_html,chapters_html,chapters_downloaded,directory="Fictions/"):
-    global url,title,cover_image,author,description,genres,ratings,stats,chapter_links,chapter_amount,epub_index_start
+    global url,title,cover_image,author,description,genres,ratings,stats,chapter_links,chapter_amount,epub_index_start,file_name_chapter_range,plural
     time = datetime.now().strftime("%Y-%m-%d %H:%M")
     genre_html = ""
     for genre in genres:
@@ -333,9 +338,13 @@ def save_to_hdd(fiction_html,chapters_html,chapters_downloaded,directory="Fictio
             genre_html += genre
         else:
             genre_html += " | " + genre
+    if file_name_chapter_range != "":
+        chapter_range_html = "<p><h2>Chapter" + plural + " " + file_name_chapter_range + "</h2></p>"
+    else:
+        chapter_range_html = "<p><h2>Chapter" + plural + " " + "1-" + str(chapter_amount) + "</h2></p>"
     stats_html = "</p><p><b>Total Views:</b> " + stats[0] + "<b> | Average Views:</b> " + stats[1] + "<b> | Followers:</b> " + stats[2] + "<b> | Favorites:</b> " + stats[3] + "<b> | Pages:</b> " + stats[4]
     statistics = "<b>Chapters:</b> " + str(chapter_amount) + "<b> | Overall Score:</b> " + ratings[0] + "<b> | Best Score:</b> " + ratings[1] + "<b> | Ratings:</b> " + ratings[2] + "</p><p><b>Style Score:</b> " + ratings[3] + "<b> | Story Score:</b> " + ratings[4] + "<b> | Character Score:</b> " + ratings[5] + "<b> | Grammar Score:</b> " + ratings[6] + stats_html + "</p>"
-    data = "<center><img src='../cover.jpg'></img><p><b><h1> \"<a href='" + url + "'>" + str(title) + "</a>\" by \"" + str(author) + "\"</h1></b></p><p><b>" + genre_html + "</b></p><p>" + statistics + "<p><h2>Last updated: " + time + "</h2></p></center><p><h3>Description:</h3> " + str(description) + "</p>"# + fiction_html
+    data = "<center><img src='../cover.jpg'></img><p><b><h1> \"<a href='" + url + "'>" + str(title) + "</a>\" by \"" + str(author) + "\"</h1></b></p>" + chapter_range_html + "<p><b>" + genre_html + "</b></p><p>" + statistics + "<p><h2>Last updated: " + time + "</h2></p></center><p><h3>Description:</h3> " + str(description) + "</p>"# + fiction_html
     title_clean = re.sub(r'[\\/*?:"<>|]',"",title)
     try:
         if author[-1] == "?":
@@ -535,7 +544,7 @@ def compress_and_convert_to_epub(directory,folder_location,output_location):
     #make_archive(output_location, 'zip', folder_location)
     zip_file_epub.close()
     remove_dir(folder_location)
-    try: #to prevent file exists error
+    try: #to prevent file exists error, fails if file is open
         os.remove(output_location+".epub")
     except:
         pass
