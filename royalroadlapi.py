@@ -151,7 +151,7 @@ def get_fiction_location(fiction_id,directory="Fictions/",start_chapter="first",
     chapter_amount = len(chapter_links)
     if chapter_links_approved != []:
         start_chapter,end_chapter,epub_index_start,chapter_amount,downloading_chapter_amount,file_name_chapter_range,plural = chapter_range_string_expressions(start_chapter,end_chapter,epub_index_start,chapter_amount,downloading_chapter_amount)
-    else: #maybe?
+    else:
         file_name_chapter_range = ""
     try:
         final_location = determine_file_location(title,directory,author,file_name_chapter_range)
@@ -160,7 +160,7 @@ def get_fiction_location(fiction_id,directory="Fictions/",start_chapter="first",
     return final_location
 
 def determine_file_location(title,directory,author,file_name_chapter_range):
-    title = re.sub(r'[\\/*?:"<>|]',"",re.sub(r'[<>]',"",title).strip()).strip() #to prevent breaking the xhtml because it does
+    title = re.sub(r'[\\/*?:"<>|]',"",re.sub(r'[<>]',"",title)).strip() #to prevent breaking the xhtml because it does
     try:
         if author[-1] == "?":
             author = author.replace("?","qstnmrk") #to prevent an empty name after the next regex that removes them
@@ -326,7 +326,6 @@ def get_chapter_content(html):
     soup = BeautifulSoup(html, "lxml")
     chapter_title = soup.find('h1', attrs={'style': 'margin-top: 10px','class': 'font-white'}).text.strip()
     content_html = str(soup.find('div', attrs={'class': 'chapter-inner chapter-content'}))
-    #print(chapter_title)
     return content_html,chapter_title
 
 def save_to_hdd(fiction_html,chapters_html,chapters_downloaded,directory="Fictions/"):
