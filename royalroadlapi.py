@@ -301,7 +301,7 @@ def save_to_hdd(fiction_html,chapters_html,chapters_downloaded,directory="Fictio
         chapter_range_html = "<p><h2>Chapter" + plural + " " + file_name_chapter_range + "</h2></p>" #specify the chapters contained in the epub
     else: #else
         chapter_range_html = "<p><h2>Chapter" + plural + " " + "1-" + str(chapter_amount) + "</h2></p>" #add it to the start of the epub info
-    stats_html = "</p><p><b>Total Views:</b> " + stats[0] + "<b> | Average Views:</b> " + stats[1] + "<b> | Followers:</b> " + stats[2] + "<b> | Favorites:</b> " + stats[3] + "<b> | Rating Amount:</b> " + stats[4] + "<b> | Pages:</b> " + stats[5] #format the stats into html
+    stats_html = "</p><p><b>Total Views:</b> " + stats[0] + "<b> | Average Views:</b> " + stats[1] + "<b> | Followers:</b> " + stats[2] + "<b> | Favorites:</b> " + stats[3] + "<b> | Pages:</b> " + stats[5] #format the stats into html
     statistics = "<b>Chapters:</b> " + str(chapter_amount) + "<b> | Overall Score:</b> " + ratings[0] + "<b> | Best Score:</b> " + ratings[1] + "<b> | Ratings:</b> " + ratings[2] + "</p><p><b>Style Score:</b> " + ratings[3] + "<b> | Story Score:</b> " + ratings[4] + "<b> | Character Score:</b> " + ratings[5] + "<b> | Grammar Score:</b> " + ratings[6] + stats_html + "</p>" #format for info into html
     data = "<center><img src='../cover.jpg'></img><p><b><h1> \"<a href='" + url + "'>" + str(title) + "</a>\" by \"" + str(author) + "\"</h1></b></p>" + chapter_range_html + "<p><b>" + genre_html + "</b></p><p>" + statistics + "<p><h2>Last updated: " + time + "</h2></p></center><p><h3>Description:</h3> " + str(description) + "</p>"#add the last few pieces of info to the html
     title_clean = re.sub(r'[\\/*?:"<>|]',"",title) #clean the title for windows and other systems
@@ -321,6 +321,7 @@ def save_to_hdd(fiction_html,chapters_html,chapters_downloaded,directory="Fictio
     folder_name = name + "/" #create the folder name variable
     os.makedirs(directory+folder_name+"OEBPS/", exist_ok=True) #make the OEBPS folder for where the epub archive with the chapter html will be located before deletion
     os.makedirs(directory+folder_name+"META-INF/", exist_ok=True) #make the META-INF folder for where the epub archive meta-inf will be located before deletion
+    os.makedirs(directory+folder_name+"OEBPS/style/", exist_ok=True) #make the style folder for where the epub css tables will come from for the formatting before deletion of their root folder, could combine with first os.makedir
 ##    file_name = name + ".html" #create the file name for the html file
 ##    full_path = directory + folder_name + file_name #create the full path for the html file
 ##    with open(full_path, "w", encoding="utf-8") as file_webnovel: #create the html file
@@ -342,7 +343,26 @@ def save_to_hdd(fiction_html,chapters_html,chapters_downloaded,directory="Fictio
     <text>"""+str(title_clean)+"""</text>
   </docTitle>
   <navMap>""")
-        
+
+    with open(directory + folder_name + "OEBPS/style/style.css", "w", encoding="utf-8") as file_css: #write the css code for the tables found on royalroad
+        file_css.write(""".chapter-content table,.forum .post-content table {
+background:#004b7a;
+width:90%;
+border:none;
+box-shadow:1px 1px 1px rgba(0,0,0,.75);
+border-collapse:separate;
+border-spacing:2px;
+margin:10px auto;
+}
+
+.chapter-content table td,.forum .post-content table td {
+color:#ccc;
+border:1px solid hsla(0,0%,100%,.25)!important;
+background:rgba(0,0,0,.1);
+margin:3px;
+padding:5px;
+}""")
+    
     with open(directory + folder_name + "META-INF/container.xml", "w", encoding="utf-8") as file_container: #create and write to the file container for the epub with info about the content.opf
         file_container.write("""<?xml version="1.0"?>
 <container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
@@ -366,6 +386,7 @@ def save_to_hdd(fiction_html,chapters_html,chapters_downloaded,directory="Fictio
   <opf:manifest>
     <opf:item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml"/>
     <opf:item id="cover" href="cover.jpg" media-type="image/jpeg"/>
+    <opf:item id="css-style" href="OEBPS/style/style.css" media-type="text/css"/>
     <opf:item id="cover-page" href="titlepage.xhtml" media-type="application/xhtml+xml"/>
     <opf:item id="prov_idx_1" href="OEBPS/info.xhtml" media-type="application/xhtml+xml"/>""")
         
@@ -409,7 +430,7 @@ def save_to_hdd(fiction_html,chapters_html,chapters_downloaded,directory="Fictio
     for chp_id in chapters_downloaded: #for each chapter id that was downloaded
         chp += 1 #add one to the chp number
         chapter_title = "Chapter " + str(chp) + ": " + chapters_html[chp_id][1] #and use it to name the chapter title with the original chapter title
-        chapter_html = "<?xml version='1.0' encoding='utf-8'?>\n<html xmlns=\"http://www.w3.org/1999/xhtml\">\n\t\t\t\t<head>\n\t\t\t\t\t<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\"/>\n\t\t\t\t\t<title>Chapter " + str(chp) + ": " + chapters_html[chp_id][1] + "</title>\n\t\t\t\t</head>\n\t\t\t\t<body>\n\t\t\t\t\t<h1>Chapter " + str(chp) + ": " + chapters_html[chp_id][1] + "</h1>\n\t\t\t\t\t" + chapters_html[chp_id][0] + "\n\t\t\t\t</body>\n\t\t\t</html>" #create the internal epub chapter html
+        chapter_html = "<?xml version='1.0' encoding='utf-8'?>\n<html xmlns=\"http://www.w3.org/1999/xhtml\">\n\t\t\t\t<head>\n\t\t\t\t\t<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\"/>\n\t\t\t\t\t<title>Chapter " + str(chp) + ": " + chapters_html[chp_id][1] + "</title>\n\t\t\t\t\t<link href=\"style/style.css\" rel=\"stylesheet\" type=\"text/css\"/>\n\t\t\t\t</head>\n\t\t\t\t<body>\n\t\t\t\t\t<h1>Chapter " + str(chp) + ": " + chapters_html[chp_id][1] + "</h1>\n\t\t\t\t\t" + chapters_html[chp_id][0] + "\n\t\t\t\t</body>\n\t\t\t</html>" #create the internal epub chapter html
         chapter_file_name = "chapter_"+str(chp)+".xhtml" #name the chapter file appropriately
         full_path = directory + folder_name + "OEBPS/" + chapter_file_name #declare the full path
         
