@@ -54,9 +54,7 @@ def get_fictions(fiction_id_start=1,fiction_id_end=None,directory="Fictions/"): 
         fiction_id_end = int(fiction_id_end) #to confirm int validity
         total = (fiction_id_end-fiction_id_start)+1 #the amount of fictions to download
         if (fiction_id_end < fiction_id_start): #you can't download backwards
-            raise Exception('Invalid Range.') #raise a custom error about an invalid range
-        else:
-            print("Invalid Range.") #the range given is out of order (backwards) or invalid(mistyped)
+            raise Exception('Invalid Range.') #raise a custom error about an invalid range as the range given is out of order (backwards) or invalid(mistyped)
     except:
         print("Please use valid numbers!") #the numbers are actually letters, words, symboles or floats, etc.
     else:
