@@ -34,8 +34,10 @@ def get_fiction(fiction_id,directory="Fictions/",start_chapter="first",end_chapt
             start_chapter,end_chapter,epub_index_start,chapter_amount,downloading_chapter_amount,file_name_chapter_range,plural = chapter_range_string_expressions(start_chapter,end_chapter,epub_index_start,chapter_amount,downloading_chapter_amount) #generate a string that represents the chapter range specified
             if file_name_chapter_range != "": #if the string is not empty
                 downloading_chapter_str = "chapter"+plural+file_name_chapter_range+", "+str(downloading_chapter_amount)+"/"+str(chapter_amount) #add it to the downloading str
-            else:
+            elif chapter_amount != 1: #if there is more than one chapter
                 downloading_chapter_str = "chapter"+plural+" "+"1-" + str(chapter_amount)+", "+str(downloading_chapter_amount)+"/"+str(chapter_amount) #if it's empty, specify that you are downloading everything
+            else: #if the fiction is only one chapter long
+                downloading_chapter_str = "chapter"+plural+" "+"1, "+str(downloading_chapter_amount)+"/"+str(chapter_amount) #only show one chapter in the download string
             print("Downloading ({}".format(downloading_chapter_str) + ") ID {}: ".format(fiction_id) + title + " - " + author + file_name_chapter_range + ".epub") #print downloading alert to the console
             get_chapters(chapter_links_approved,directory) #perform download of chapters in the range
             return final_location #return the final location it was saved at
@@ -297,8 +299,10 @@ def save_to_hdd(fiction_html,chapters_html,chapters_downloaded,directory="Fictio
             genre_html += " | " + genre #add a fancy separator and the genre to the end
     if file_name_chapter_range != "": #if the chapter range is not default
         chapter_range_html = "<p><h2>Chapter" + plural + " " + file_name_chapter_range + "</h2></p>" #specify the chapters contained in the epub
-    else: #else
+    elif chapter_amount != 1: #else
         chapter_range_html = "<p><h2>Chapter" + plural + " " + "1-" + str(chapter_amount) + "</h2></p>" #add it to the start of the epub info
+    else:
+        chapter_range_html = "<p><h2>Chapter" + plural + " " + "1</h2></p>" #specify that there is only a single chapter in the fiction
     stats_html = "</p><p><b>Total Views:</b> " + stats[0] + "<b> | Average Views:</b> " + stats[1] + "<b> | Followers:</b> " + stats[2] + "<b> | Favorites:</b> " + stats[3] + "<b> | Pages:</b> " + stats[5] #format the stats into html
     statistics = "<b>Chapters:</b> " + str(chapter_amount) + "<b> | Overall Score:</b> " + ratings[0] + "<b> | Best Score:</b> " + ratings[1] + "<b> | Ratings:</b> " + ratings[2] + "</p><p><b>Style Score:</b> " + ratings[3] + "<b> | Story Score:</b> " + ratings[4] + "<b> | Character Score:</b> " + ratings[5] + "<b> | Grammar Score:</b> " + ratings[6] + stats_html + "</p>" #format for info into html
     data = "<center><img src='../cover.jpg'></img><p><b><h1> \"<a href='" + url + "'>" + str(title) + "</a>\" by \"" + str(author) + "\"</h1></b></p>" + chapter_range_html + "<p><b>" + genre_html + "</b></p><p>" + statistics + "<p><h2>Last updated: " + time + "</h2></p></center><p><h3>Description:</h3> " + str(description) + "</p>"#add the last few pieces of info to the html
