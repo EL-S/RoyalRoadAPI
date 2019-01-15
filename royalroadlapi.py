@@ -486,12 +486,12 @@ padding:5px;
         </div>
     </body>
 </html>""")
-    obtain_and_save_image(directory,folder_name,cover_image) #either decode the base64 image or download the image from the external image address and save it
     output_location = directory #declare the output location
     folder_location = directory + folder_name #declare the folder location
+    obtain_and_save_image(folder_location,cover_image) #either decode the base64 image or download the image from the external image address and save it
     compress_and_convert_to_epub(directory,folder_location,output_location) #compress and covert the epub from the local archive that was created and then remove the archive and folder
 
-def obtain_and_save_image(directory,folder_name,cover_image): #decode the base64 image or download the image and then save it
+def obtain_and_save_image(directory,cover_image): #decode the base64 image or download the image and then save it
     if (cover_image.split(",")[0] != "data:image/jpeg;base64") and (cover_image.split(",")[0] != "data:image/gif;base64") and (cover_image.split(",")[0] != "data:image/png;base64"): #if the image is not base64 encoded
         image_data = download_image_data(cover_image) #download the image
         if image_data == None: #if the image is empty
@@ -502,11 +502,11 @@ def obtain_and_save_image(directory,folder_name,cover_image): #decode the base64
         except:
             image_data = download_image_data("http://www.royalroadl.com/Content/Images/rr-placeholder.jpg") #download the default image if the decode fails
     try:
-        with open(directory + folder_name + "cover.jpg", "wb") as cover_image_file: #write the image data to the local location in bytes
+        with open(directory + "cover.jpg", "wb") as cover_image_file: #write the image data to the local location in bytes
             cover_image_file.write(image_data)
     except:
         image_data = download_image_data("http://www.royalroadl.com/Content/Images/rr-placeholder.jpg") #download the default image if the decode fails
-        with open(directory + folder_name + "cover.jpg", "wb") as cover_image_file: #write the image data to the local location in bytes
+        with open(directory + "cover.jpg", "wb") as cover_image_file: #write the image data to the local location in bytes
             cover_image_file.write(image_data)
             
 def download_image_data(cover_image): #download the image data
