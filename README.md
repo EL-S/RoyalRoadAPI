@@ -8,6 +8,7 @@ get_fiction_object() takes a single argument, the fiction id, and returns a pars
 With this object, you can request data from the page without making a http request for each piece of data.
 
 eg.
+
 	fiction_id = search_fiction(search_term) # to get a fiction id from a given search term
 	fiction = get_fiction_object(fiction_id) # to get the fiction page and its information
 	title = get_fiction_title(fiction) # to get the fictions title
