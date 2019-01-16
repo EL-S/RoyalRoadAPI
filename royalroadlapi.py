@@ -72,6 +72,178 @@ def get_fictions(fiction_id_start=1,fiction_id_end=None,directory="Fictions/"): 
     finally:
         print("Program Complete.") #the multidownload has failed or completed
 
+def get_user_data(user_id):
+    user_id = get_user_id(user_id)
+    try:
+        url = "https://www.royalroad.com/profile/"+str(user_id)
+        soup = request_soup(url)
+        favorite_fictions = soup.findAll("span", attrs={"class":"stat-value"})[1].text.strip()
+        ratings = soup.findAll("span", attrs={"class":"stat-value"})[2].text.strip()
+        data = soup.find("tbody").findAll("td")
+        join_date = [data[0].text.strip(),data[0].find("time").get("unixtime").strip()]
+        last_active = [data[1].text.strip(),data[1].find("time").get("unixtime").strip()]
+        gender = data[2].text.strip()
+        location = data[3].text.strip()
+        bio = data[4].text.strip()
+        data2 = soup.findAll("tbody")[1].findAll("td")
+        fiction_amount = data2[0].text.strip().replace(",","")
+        total_words = data2[1].text.strip().replace(",","")
+        total_reviews_recieved = data2[2].text.strip().replace(",","")
+        followers = data2[3].text.strip().replace(",","")
+        favorites_recieved = data2[4].text.strip().replace(",","")
+        data = [join_date,last_active,gender,location,bio,fiction_amount,total_words,total_reviews_recieved,followers,favorites_recieved,ratings,favorite_fictions]
+        return data
+    except:
+        print("Invalid User ID/Name Input (or profile).")
+
+def get_user_achievements(user_id):
+    user_id = get_user_id(user_id)
+    try:
+        url = "https://www.royalroad.com/profile/"+str(user_id)+"/achievements"
+        soup = request_soup(url)
+        achievements = []
+        achievement_listings = soup.find("div", attrs={"class":"portlet-body achievements"}).findAll("div", attrs={"class":"well achievement-well"})
+        for achievement_listing in achievement_listings:
+            title = achievement_listing.text.strip().split("\n")[0].strip().split(" (")[0].strip("")
+            try:
+                level_rn = achievement_listing.text.strip().split("\n")[0].strip().split(" (")[-1].strip(")")
+                level = rn_to_int(level_rn)
+            except:
+                level = 1
+            description = achievement_listing.text.split("\n")[2].strip()
+            achievements.append([title,level,description])
+        return achievements
+    except:
+        print("Invalid User ID/Name Input (or profile).")
+
+
+
+def rn_to_int(rn): #resolve the roman numberals in achievement titles to integers
+    try:
+        symbols = {"I":1,"V":5,"X":10,"L":50,"C":100,"D":500,"M":1000}
+        num = 0
+        pos = 0
+        len_rn = len(rn)
+        for character in rn:
+            if pos != len_rn-1:
+                print(symbols[character],symbols[rn[pos+1]])
+                if symbols[character] > symbols[rn[pos+1]]:
+                    num += symbols[character]
+                elif symbols[character] == symbols[rn[pos+1]]:
+                    num += symbols[character]
+                else:
+                    num -= symbols[character]
+            else:
+                num += symbols[character]
+            pos += 1
+    except:
+        num = 1
+    return num
+
+def get_user_fictions(user_id):
+    user_id = get_user_id(user_id)
+    try:
+        url = "https://www.royalroad.com/profile/"+str(user_id)+"/fictions"
+        fictions = get_fictions_from_url(url)
+        return fictions
+    except:
+        print("Invalid User ID/Name Input (or profile).")
+
+def get_user_favorites(user_id):
+    user_id = get_user_id(user_id)
+    try:
+        url = "https://www.royalroad.com/profile/"+str(user_id)+"/favorites"
+        favorites = get_fictions_from_url(url)
+        return favorites
+    except:
+        print("Invalid User ID/Name Input (or profile).")
+
+def get_fictions_from_url(url):
+    soup = request_soup(url)
+    try:
+        pages = int(soup.find("ul", attrs={"class":"pagination"}).findAll("a")[-1].get("href").split("=")[-1])
+    except:
+        pages = 1
+    fictions = []
+    fictions = extract_fictions_from_url(soup,fictions)
+    if pages > 1:
+        for i in range(2,pages+1):
+            url_page = str(url)+"?page="+str(i)
+            print(url_page)
+            soup = request_soup(url_page)
+            fictions = extract_fictions_from_url(soup,fictions)
+    return fictions
+
+def extract_fictions_from_url(soup,fictions):
+    fiction_listings = soup.findAll("div", attrs={"class":"col-xs-12 col-sm-6 col-md-4 col-lg-3 padding-bottom-10"})
+    for fiction_listing in fiction_listings:
+        data = fiction_listing.find("div", attrs={"class":"mt-overlay-3"}).find("div", attrs={"class":"mt-overlay"})
+        title = data.find("h2").text.strip().split("\n")[0]
+        data2 = data.find("div", attrs={"class":"mt-info"})
+        description = data2.find("div", attrs={"class":"fiction-description"}).text.strip()
+        fiction_id = data2.findAll("a")[-1].get("href").split("/")[-2].strip()
+        fictions.append([fiction_id,title,description])
+    return fictions
+
+def get_user_posts(user_id):
+    user_id = get_user_id(user_id)
+    try:
+        url = "https://www.royalroad.com/profile/"+str(user_id)+"/posts"
+        soup = request_soup(url)
+        try:
+            pages = int(soup.find("ul", attrs={"class":"pagination"}).findAll("a")[-1].get("href").split("=")[-1])
+        except:
+            pages = 1
+        posts = []
+        posts = get_user_posts_data(soup,posts)
+        if pages > 1:
+            for i in range(2,pages+1):
+                url_page = str(url)+"?page="+str(i)
+                print(url_page)
+                soup = request_soup(url_page)
+                posts = get_user_posts_data(soup,posts)
+        return posts
+    except:
+        print("Invalid User ID/Name Input (or profile).")
+
+def get_user_posts_data(soup,posts):
+    post_listings = soup.find("li", attrs={"class":"forum-bg"}).findAll("li")
+    for post_div in post_listings:
+        post_content = post_div.find("div", attrs={"class":"topic-description-inner"})
+        time_data = post_div.find("div", attrs={"class":"topic-stats"}).find("small").find("time")
+        last_post_data = post_div.find("div", attrs={"class":"topic-recent"})
+        last_post_time_data = post_div.find("div", attrs={"class":"topic-recent"}).find("time")
+        
+        link = post_content.find("h4").find("a").get("href").strip()
+        title = post_content.find("h4").text.strip()
+        content = post_content.find("p").text.strip()
+        time = [time_data.text.strip(),time_data.get("unixtime").strip()]
+
+        last_post_user_id = last_post_data.find("a").get("href").split("/")[-1].strip()
+        last_post_user_name = last_post_data.find("a").text.strip()
+
+        last_post_time = [last_post_time_data.text.strip(),last_post_time_data.get("unixtime").strip()]
+
+        last_post = [last_post_user_id,last_post_user_name,last_post_time]
+
+        posts.append([link,title,content,time,last_post])
+    return posts
+
+def get_user_id(user_name):
+    try:
+        int(user_name) #check if the input value is a user_id and not a user_name
+        user_id = user_name #it was a user_id
+    except: #it was probably a user_name
+        search_term = user_name.replace(" ","+") #replace spaces with plus signs
+        url = "https://www.royalroad.com/user/memberlist?q="+str(search_term) #construct the url
+        print(url) #print the search url for debug or console purposes
+        soup = request_soup(url) #request the soup
+        try:
+            user_id = int(soup.find("tbody").find("tr").find("td").find("a").get("href").split("/")[2]) #attempt to gather the first user id
+        except: #there was no user with that id or the html is incorrect
+            return None #return none
+    return user_id #return the user id
+
 def find_latest_fiction_id(): #find the latest fictiond id
     url = "https://www.royalroad.com/fictions/new-releases" #specify a url
     soup = request_soup(url) #request the soup
