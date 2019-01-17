@@ -215,6 +215,10 @@ def get_user_posts_data(soup,posts):
         last_post_time_data = post_div.find("div", attrs={"class":"topic-recent"}).find("time")
         
         link = post_content.find("h4").find("a").get("href").strip()
+        id_str = link.split("/")[-1]
+        
+        thread_id = id_str.split("?")[0] 
+        post_id = id_str.split("pid")[-1]
         title = post_content.find("h4").text.strip()
         content = post_content.find("p").text.strip()
         time = [time_data.text.strip(),time_data.get("unixtime").strip()]
@@ -226,8 +230,98 @@ def get_user_posts_data(soup,posts):
 
         last_post = [last_post_user_id,last_post_user_name,last_post_time]
 
-        posts.append([link,title,content,time,last_post])
+        posts.append([thread_id,post_id,link,title,content,time,last_post])
     return posts
+
+def get_user_reviews(user_id):
+    user_id = get_user_id(user_id)
+    try:
+        url = "https://www.royalroad.com/profile/"+str(user_id)+"/reviews"
+        soup = request_soup(url)
+        try:
+            pages = int(soup.find("ul", attrs={"class":"pagination"}).findAll("a")[-1].get("href").split("=")[-1])
+        except:
+            pages = 1
+        print(pages)
+        reviews = []
+        reviews = get_user_reviews_data(soup,reviews)
+        if pages > 1:
+            for i in range(2,pages+1):
+                url_page = str(url)+"?page="+str(i)
+                print(url_page)
+                soup = request_soup(url_page)
+                reviews = get_user_reviews_data(soup,reviews)
+        return reviews
+    except:
+        print("Invalid User ID/Name Input (or profile).")
+
+def get_user_reviews_data(soup,reviews):
+    review_listings = soup.find("div", attrs={"class":"portlet-body"})
+    review_listings_bodys = review_listings.findAll("div", attrs={"class":"row review"})
+    review_listings_ratings = review_listings.findAll("div", attrs={"class":"row hidden-xs visible-sm visible-md visible-lg"})
+    counter = 0
+    for review_div in review_listings_bodys:
+        review_title = review_div.find("h4", attrs={"class":"bold uppercase font-blue-dark"}).text
+        review_content = review_div.find("div", attrs={"class":"review-content"}).text
+        links = review_div.findAll("a")
+        fiction_title = links[0].text
+        fiction_id = links[0].get("href").split("/")[-2]
+        review_id = links[1].get("href").split("-")[-1]
+        time = [links[1].text.strip(),links[1].find("time").get("unixtime").strip()]
+        ratings = []
+        rating_list = review_listings_ratings[counter].findAll("ul", attrs={"class":"list-unstyled"})#int(review_listings_ratings[counter].find("ul", attrs={"class":"list-unstyled"}).find("div").get("class")[-1].split("-")[-1])/10 #out of five
+        for item in rating_list:
+            value = int(item.find("div").get("class")[-1].split("-")[-1])/10
+            rating_type = item.find("li").text.split()[0].lower()
+            ratings.append([rating_type,value])
+        reviews.append([review_title,review_content,fiction_title,fiction_id,review_id,time,ratings])
+        counter += 1
+    return reviews
+
+def get_user_threads(user_id):
+    user_id = get_user_id(user_id)
+    try:
+        url = "https://www.royalroad.com/profile/"+str(user_id)+"/threads"
+        soup = request_soup(url)
+        try:
+            pages = int(soup.find("ul", attrs={"class":"pagination"}).findAll("a")[-1].get("href").split("=")[-1])
+        except:
+            pages = 1
+        print(pages)
+        threads = []
+        threads = get_user_threads_data(soup,threads)
+        if pages > 1:
+            for i in range(2,pages+1):
+                url_page = str(url)+"?page="+str(i)
+                print(url_page)
+                soup = request_soup(url_page)
+                threads = get_user_threads_data(soup,threads)
+        return threads
+    except:
+        print("Invalid User ID/Name Input (or profile).")
+
+def get_user_threads_data(soup,threads):
+    thread_listings = soup.find("li", attrs={"class":"forum-bg"}).findAll("li", attrs={"class":"sticky"})
+    for thread_div in thread_listings:
+        thread_content = thread_div.find("div", attrs={"class":"topic-description-inner"})
+        time_data = thread_div.find("div", attrs={"class":"topic-description-inner"}).find("time")
+        last_post_data = thread_div.find("div", attrs={"class":"topic-recent"})
+        last_post_time_data = thread_div.find("div", attrs={"class":"topic-recent"}).find("time")
+        link = thread_content.find("h4").find("a").get("href").strip()
+        thread_id = link.split("/")[-1]
+        title = thread_content.find("h4").text.strip()
+        replies = thread_div.find("span", attrs={"class":"topic-replies"}).text.strip().split()[0].replace(",","")
+        views = thread_div.find("span", attrs={"class":"topic-views"}).text.strip().split()[0].replace(",","")
+        time = [time_data.text.strip(),time_data.get("unixtime").strip()]
+        last_post_user_id = last_post_data.find("a").get("href").split("/")[-1].strip()
+        last_post_user_name = last_post_data.find("a").text.strip()
+
+        last_post_time = [last_post_time_data.text.strip(),last_post_time_data.get("unixtime").strip()]
+
+        last_post = [last_post_user_id,last_post_user_name,last_post_time]
+
+        threads.append([thread_id,link,title,replies,views,time,last_post])
+    return threads
 
 def get_user_id(user_name):
     try:
