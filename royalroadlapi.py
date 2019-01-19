@@ -72,7 +72,7 @@ def get_fictions(fiction_id_start=1,fiction_id_end=None,directory="Fictions/"): 
     finally:
         print("Program Complete.") #the multidownload has failed or completed
 
-def get_user_data(user_id):
+def get_user_data(user_id): #returns general user data
     user_id = get_user_id(user_id)
     try:
         url = "https://www.royalroad.com/profile/"+str(user_id)
@@ -96,7 +96,7 @@ def get_user_data(user_id):
     except:
         print("Invalid User ID/Name Input (or profile).")
 
-def get_user_achievements(user_id):
+def get_user_achievements(user_id): #returns user achievements
     user_id = get_user_id(user_id)
     try:
         url = "https://www.royalroad.com/profile/"+str(user_id)+"/achievements"
@@ -140,7 +140,7 @@ def rn_to_int(rn): #resolve the roman numberals in achievement titles to integer
         num = 1
     return num
 
-def get_user_fictions(user_id):
+def get_user_fictions(user_id): #returns user fictions
     user_id = get_user_id(user_id)
     try:
         url = "https://www.royalroad.com/profile/"+str(user_id)+"/fictions"
@@ -149,7 +149,7 @@ def get_user_fictions(user_id):
     except:
         print("Invalid User ID/Name Input (or profile).")
 
-def get_user_favorites(user_id):
+def get_user_favorites(user_id): #returns user favorites
     user_id = get_user_id(user_id)
     try:
         url = "https://www.royalroad.com/profile/"+str(user_id)+"/favorites"
@@ -185,7 +185,7 @@ def extract_fictions_from_url(soup,fictions):
         fictions.append([fiction_id,title,description])
     return fictions
 
-def get_user_posts(user_id):
+def get_user_posts(user_id): #returns all user posts
     user_id = get_user_id(user_id)
     try:
         url = "https://www.royalroad.com/profile/"+str(user_id)+"/posts"
@@ -233,7 +233,7 @@ def get_user_posts_data(soup,posts):
         posts.append([thread_id,post_id,link,title,content,time,last_post])
     return posts
 
-def get_user_reviews(user_id):
+def get_user_reviews(user_id): #returns all user reviews
     user_id = get_user_id(user_id)
     try:
         url = "https://www.royalroad.com/profile/"+str(user_id)+"/reviews"
@@ -278,7 +278,7 @@ def get_user_reviews_data(soup,reviews):
         counter += 1
     return reviews
 
-def get_user_threads(user_id):
+def get_user_threads(user_id): #returns threads made by the user
     user_id = get_user_id(user_id)
     try:
         url = "https://www.royalroad.com/profile/"+str(user_id)+"/threads"
@@ -323,7 +323,7 @@ def get_user_threads_data(soup,threads):
         threads.append([thread_id,link,title,replies,views,time,last_post])
     return threads
 
-def get_user_id(user_name):
+def get_user_id(user_name):.  #returns a user's id
     try:
         int(user_name) #check if the input value is a user_id and not a user_name
         user_id = user_name #it was a user_id
