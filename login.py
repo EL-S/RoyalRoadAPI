@@ -4,7 +4,7 @@ import time
 from random import randint
 import urllib
 
-def login(username,password):
+def login(username,password): #works
     set_cookies,soup,cookie = establish_first_connection() #establish the first connection and get the required cookies and values from the dom and headers
 
     set_cookies,cookie = send_login_request(soup,username,password,cookie) #send a post request with all the information
@@ -99,7 +99,7 @@ def request_secure_page(url,login_object):
     soup = BeautifulSoup(html, "lxml")
     return soup
 
-def send_message(login_object,recipients,subject,message,replyto):
+def send_message(login_object,recipients,subject,message,replyto): #currently returns bad request, needs some work
     #print(login_object)
     cookie = login_object[0]['cookie'][:-1]
     url_compose = "https://www.royalroad.com/private/send"
