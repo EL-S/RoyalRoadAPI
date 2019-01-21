@@ -18,8 +18,6 @@ def login(username,password):
                 "User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36"}
 
     user_id = get_logged_in_users_id(headers)
-
-    print("Logged In.")
     
     return [headers,user_id] #return the working login information
 
@@ -101,65 +99,54 @@ def request_secure_page(url,login_object):
     soup = BeautifulSoup(html, "lxml")
     return soup
 
-def send_message(login_object,recipients,subject,message,replyto=""):
+def send_message(login_object,recipients,subject,message,replyto):
+    #print(login_object)
     cookie = login_object[0]['cookie'][:-1]
     url_compose = "https://www.royalroad.com/private/send"
     soup = request_secure_page(url_compose, login_object)
-
     requesttoken = soup.find("input", attrs={"name":"__RequestVerificationToken"}).get("value")
-    
-    cfuid = cookie.split(";")[0].split("=")[1]
-    ga = cookie.split(";")[1].split("=")[1]
-    visited = cookie.split(";")[3].split("=")[1]
-    notif_dismiss = "1"
-    royalroad_sessionid = cookie.split(";")[4].split("=")[1]
-    gid = cookie.split(";")[2].split("=")[1]
-    
-    antiforgery = cookie.split(";")[5].split("=")[1]
-    identity_application = cookie.split(";")[6].split("=")[1]
-    
-    cookie_new = "__cfduid="+cfuid+"; _ga="+ga+"; visited="+visited+"; notif_dismiss-987973="+notif_dismiss+"; RoyalRoad.SessionId="+royalroad_sessionid+"; .AspNetCore.Antiforgery.w5W7x28NAIs="+antiforgery+"; _gid="+gid+"; .AspNetCore.Identity.Application="+identity_application
-
-    url = "https://www.royalroad.com/private/send/"
+    notif = "; notif_dismiss-987973=1"
+    royalroad_session = ";"+cookie.split(";")[4]+";"
+    cookie_new = ";".join(cookie.split(";")[:4])+"; .AspNetCore.Antiforgery.w5W7x28NAIs="+requesttoken+notif+royalroad_session+";".join(cookie.split(";")[6:])
+    #print(cookie_new)
+    user_id = login_object[1]
+    url = "https://www.royalroad.com/private/send/"+str(user_id)
     action = "send"
-
-    data = {"__RequestVerificationToken": requesttoken,
-            "replyto": replyto, #the messageid of the message being quick replied to
-            "Uid": recipients,
-            "Subject": subject,
-            "content": message,
-            "action": action}
-    url_encoded = urllib.parse.urlencode(data) #maybe this is wrong
+    data = {"__RequestVerificationToken":requesttoken,
+            "replyto":replyto,
+            "Uid":recipients,
+            "Subject":subject,
+            "content":message,
+            "action":action}
+    url_encoded = "__RequestVerificationToken="+requesttoken+"&replyto="+replyto+"&Uid="+recipients+"&Subject="+subject+"&content="+message+"&action="+action #urllib.parse.urlencode(data) #maybe this is wrong
     content_length = str(len(url_encoded))
     headers = {"accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
                 "accept-encoding": "gzip, deflate",
                 "accept-language": "en-US,en;q=0.9",
                 "cache-control": "max-age=0",
-                "content-length": content_length, #can be anything
+                "content-length": content_length,
                 "content-type": "application/x-www-form-urlencoded",
-                "cookie": cookie_new, #must be correct
+                "cookie": cookie_new,
                 "origin": "https://www.royalroad.com",
-                "referer": url_compose, #can be anything?
+                "referer": url_compose,
                 "upgrade-insecure-requests": "1",
                 "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36"}
-
+    print(data)
+    print(headers)
+    print(url)
     req = requests.post(url, data=data, headers=headers)
-
-    soup = BeautifulSoup(req.text, "lxml")
-    title = soup.find("title").text
-    if "pm sent".lower() in title.lower():
-        status = True
-        print("Message Sent.")
-    else:
-        status = False
-        print("Message failed to send.")
+    print(req.headers)
+    print(req.text)
+    status = True
     
     return status
 
 login_object = login("","")
 
-status = send_message(login_object,"userid","subject","message")
-    
+status = send_message(login_object,"18597","subject","message","")
 
+#soup = request_secure_page("https://www.royalroad.com/account",login_object)
+
+#print(soup)
 
 
