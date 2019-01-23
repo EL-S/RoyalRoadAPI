@@ -156,6 +156,6 @@ def send_message(login_object,recipients,subject,message,replyto=""):
     
     return status
 
-login_object = login("","")
+login_object = login("username","password")
 
 status = send_message(login_object,"userid","subject","message")
