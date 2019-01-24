@@ -1,5 +1,5 @@
 # RoyalRoadLAPI
-A Python API to request data from the fanfiction website RoyalRoadL
+A Python API to request and send data with the fanfiction website RoyalRoadL
 
 To obtain individual data from a fiction, you must first call the get_fiction_object() function if you have a fiction id, or use search_fiction() to get a fiction id. #(to collect all data, refer to bottom)
 
@@ -87,3 +87,18 @@ Data that can be requested includes:
 	#considering implementing a function to return chapter content and information from a given fiction_id and chapter_num, or just a chapter_id, or potentially, a chapter_link
 		
 
+If using login.py it is possible to login to royalroad amd request secure pages, read messages amd even send messages.
+Eg.
+
+	
+
+	
+
+
+
+
+login_object = login("username","password")
+    #logs into an account and returns the security keys and cookies in the login_object
+
+status = send_message(login_object,"userid","subject","message")
+    #returns true if the message successfully sent, and none if not.
