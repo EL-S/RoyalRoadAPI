@@ -101,4 +101,4 @@ login_object = login("username","password")
     #logs into an account and returns the security keys and cookies in the login_object
 
 status = send_message(login_object,"userid","subject","message")
-    #returns true if the message successfully sent, and none if not.
+    #returns true if the message successfully sent, and false if not.
