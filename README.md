@@ -90,15 +90,9 @@ Data that can be requested includes:
 If using login.py it is possible to login to royalroad amd request secure pages, read messages amd even send messages.
 Eg.
 
-	
 
-	
+    login_object = login("username","password")
+        #logs into an account and returns the security keys and cookies in the login_object
 
-
-
-
-login_object = login("username","password")
-    #logs into an account and returns the security keys and cookies in the login_object
-
-status = send_message(login_object,"userid","subject","message")
-    #returns true if the message successfully sent, and false if not.
+    status = send_message(login_object,"userid","subject","message")
+        #returns true if the message successfully sent, and false if not.
