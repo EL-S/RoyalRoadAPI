@@ -824,7 +824,7 @@ def addFolderToZip(zip_file_epub, folder_location): #add a folder recursively to
 
 def handle_chapter_response(response): #asynchronously handle the chapter responses
     global i,chapters_downloaded,chapters_html,fiction_html,directory,http_client #access global variables
-    if response.code == 599: #if the request failed
+    if response.code == 599: #if the request failed (timeout or 404)
         print(response.effective_url,"error") #print an error to the console
         http_client.fetch(response.effective_url.strip(), handle_chapter_response, method='GET',connect_timeout=10,request_timeout=10) #add the failed url to the loop and give it a 10 second timeout
     else:
