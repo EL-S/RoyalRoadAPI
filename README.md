@@ -87,7 +87,7 @@ Data that can be requested includes:
 	#considering implementing a function to return chapter content and information from a given fiction_id and chapter_num, or just a chapter_id, or potentially, a chapter_link
 		
 
-If using login.py it is possible to login to royalroad and request secure pages, read messages and even send messages.
+If using login.py it is possible to login to royalroad and request secure pages, read messages (not yet implemented) and even send messages.
 
 Eg.
 
