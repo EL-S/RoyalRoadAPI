@@ -91,7 +91,6 @@ If using login.py it is possible to login to royalroad and request secure pages,
 
 Eg.
 
-
     login_object = login("username","password")
         #logs into an account and returns the security keys and cookies in the login_object
 
