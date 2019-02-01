@@ -7,21 +7,25 @@ import urllib
 def login(username,password):
     set_cookies,soup,cookie = establish_first_connection() #establish the first connection and get the required cookies and values from the dom and headers
 
-    set_cookies,cookie = send_login_request(soup,username,password,cookie) #send a post request with all the information
+    response = send_login_request(soup,username,password,cookie) #send a post request with all the information
 
-    headers = {"accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
-                "accept-encoding": "gzip, deflate",
-                "accept-language": "en-US,en;q=0.9",
-                "cookie": cookie,
-                "referrer": "https://www.royalroad.com/account/loginsuccess?returnUrl=https%3A%2F%2Fwww.royalroad.com%2Fhome",
-                "upgrade-insecure-requests": "1",
-                "User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36"}
+    if response != None:
+        set_cookies,cookie = response
+        headers = {"accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
+                    "accept-encoding": "gzip, deflate",
+                    "accept-language": "en-US,en;q=0.9",
+                    "cookie": cookie,
+                    "referrer": "https://www.royalroad.com/account/loginsuccess?returnUrl=https%3A%2F%2Fwww.royalroad.com%2Fhome",
+                    "upgrade-insecure-requests": "1",
+                    "User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36"}
 
-    user_id = get_logged_in_users_id(headers)
+        user_id = get_logged_in_users_id(headers)
 
-    print("Logged In.")
-    
-    return [headers,user_id] #return the working login information
+        print("Successfully Logged In.")
+        
+        return [headers,user_id] #return the working login information
+    else:
+        return None
 
 def establish_first_connection():
     url = "https://www.royalroad.com/account/login"
@@ -81,12 +85,12 @@ def send_login_request(soup,username,password,cookie):
     login_request = requests.post(url, headers=headers, data=data, allow_redirects=False)
 
     login_response_headers = login_request.headers
-
-    set_cookies = login_response_headers["Set-Cookie"].split(";")
-
-    cookie += "; "+set_cookies[0]+";"
-    
-    return set_cookies,cookie
+    try:
+        set_cookies = login_response_headers["Set-Cookie"].split(";")
+        cookie += "; "+set_cookies[0]+";"
+        return [set_cookies,cookie]
+    except:
+        print("Failed to Login.")
 
 def get_logged_in_users_id(login_details):
     req = requests.get("https://www.royalroad.com/home", headers=login_details)
@@ -95,67 +99,115 @@ def get_logged_in_users_id(login_details):
     user_id = soup.find("ul", attrs={"class":"dropdown-menu dropdown-menu-default"}).find("a").get("href").split("/")[-1].strip()
     return user_id
 
-def request_secure_page(url,login_object):
+def request_secure_page(url,login_object): #implement retry logic
     req = requests.get(url, headers=login_object[0])
     html = req.text
     soup = BeautifulSoup(html, "lxml")
     return soup
 
 def send_message(login_object,recipients,subject,message,replyto=""):
-    cookie = login_object[0]['cookie'][:-1]
-    url_compose = "https://www.royalroad.com/private/send"
-    soup = request_secure_page(url_compose, login_object)
-
-    requesttoken = soup.find("input", attrs={"name":"__RequestVerificationToken"}).get("value")
-    
-    cfuid = cookie.split(";")[0].split("=")[1]
-    ga = cookie.split(";")[1].split("=")[1]
-    visited = cookie.split(";")[3].split("=")[1]
-    notif_dismiss = "1"
-    royalroad_sessionid = cookie.split(";")[4].split("=")[1]
-    gid = cookie.split(";")[2].split("=")[1]
-    
-    antiforgery = cookie.split(";")[5].split("=")[1]
-    identity_application = cookie.split(";")[6].split("=")[1]
-    
-    cookie_new = "__cfduid="+cfuid+"; _ga="+ga+"; visited="+visited+"; notif_dismiss-987973="+notif_dismiss+"; RoyalRoad.SessionId="+royalroad_sessionid+"; .AspNetCore.Antiforgery.w5W7x28NAIs="+antiforgery+"; _gid="+gid+"; .AspNetCore.Identity.Application="+identity_application
-
-    url = "https://www.royalroad.com/private/send/"
-    action = "send"
-
-    data = {"__RequestVerificationToken": requesttoken,
-            "replyto": replyto, #the messageid of the message being quick replied to
-            "Uid": recipients,
-            "Subject": subject,
-            "content": message,
-            "action": action}
-    url_encoded = urllib.parse.urlencode(data) #maybe this is wrong
-    content_length = str(len(url_encoded))
-    headers = {"accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
-                "accept-encoding": "gzip, deflate",
-                "accept-language": "en-US,en;q=0.9",
-                "cache-control": "max-age=0",
-                "content-length": content_length, #can be anything
-                "content-type": "application/x-www-form-urlencoded",
-                "cookie": cookie_new, #must be correct
-                "origin": "https://www.royalroad.com",
-                "referer": url_compose, #can be anything?
-                "upgrade-insecure-requests": "1",
-                "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36"}
-
-    req = requests.post(url, data=data, headers=headers)
-
-    soup = BeautifulSoup(req.text, "lxml")
-    title = soup.find("title").text
-    if "pm sent".lower() in title.lower():
-        status = True
-        print("Message Sent.")
-    else:
+    if login_object == None:
+        print("Failed to Send Message: Not Logged In.")
         status = False
-        print("Message failed to send.")
-    
-    return status
+        return status
+    else:
+        cookie = login_object[0]['cookie'][:-1]
+        url_compose = "https://www.royalroad.com/private/send"
+        soup = request_secure_page(url_compose, login_object)
+
+        requesttoken = soup.find("input", attrs={"name":"__RequestVerificationToken"}).get("value")
+        
+        cfuid = cookie.split(";")[0].split("=")[1]
+        ga = cookie.split(";")[1].split("=")[1]
+        visited = cookie.split(";")[3].split("=")[1]
+        notif_dismiss = "1"
+        royalroad_sessionid = cookie.split(";")[4].split("=")[1]
+        gid = cookie.split(";")[2].split("=")[1]
+        
+        antiforgery = cookie.split(";")[5].split("=")[1]
+        identity_application = cookie.split(";")[6].split("=")[1]
+        
+        cookie_new = "__cfduid="+cfuid+"; _ga="+ga+"; visited="+visited+"; notif_dismiss-987973="+notif_dismiss+"; RoyalRoad.SessionId="+royalroad_sessionid+"; .AspNetCore.Antiforgery.w5W7x28NAIs="+antiforgery+"; _gid="+gid+"; .AspNetCore.Identity.Application="+identity_application
+
+        url = "https://www.royalroad.com/private/send/"
+        action = "send"
+
+        data = {"__RequestVerificationToken": requesttoken,
+                "replyto": replyto, #the messageid of the message being quick replied to
+                "Uid": recipients,
+                "Subject": subject,
+                "content": message,
+                "action": action}
+        url_encoded = urllib.parse.urlencode(data) #maybe this is wrong
+        content_length = str(len(url_encoded))
+        headers = {"accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
+                    "accept-encoding": "gzip, deflate",
+                    "accept-language": "en-US,en;q=0.9",
+                    "cache-control": "max-age=0",
+                    "content-length": content_length, #can be anything
+                    "content-type": "application/x-www-form-urlencoded",
+                    "cookie": cookie_new, #must be correct
+                    "origin": "https://www.royalroad.com",
+                    "referer": url_compose, #can be anything?
+                    "upgrade-insecure-requests": "1",
+                    "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36"}
+
+        req = requests.post(url, data=data, headers=headers)
+
+        soup = BeautifulSoup(req.text, "lxml")
+        title = soup.find("title").text
+        if "pm sent".lower() in title.lower():
+            status = True
+            print("Message sent.")
+        else:
+            status = False
+            print("Message failed to send.")
+        
+        return status
+
+
+def read_messages(login_object):
+    if login_object == None:
+        print("Failed to Read Messages: Not Logged In.")
+        return
+    else:
+        url = "https://www.royalroad.com/private"
+        soup = request_secure_page(url,login_object)
+        try:
+            pages = int(soup.find("ul", attrs={"class":"pagination"}).findAll("a")[-1].get("href").split("=")[-1])
+        except:
+            pages = 1
+        messages = []
+        messages = extract_messages_from_soup(soup,messages)
+        if pages > 1:
+            for i in range(2,pages+1):
+                url_page = str(url)+"?page="+str(i)
+                print(url_page)
+                soup = request_secure_page(url_page,login_object)
+                messages = extract_messages_from_soup(soup,messages)
+        return messages
+
+def extract_messages_from_soup(soup,messages):
+    message_listings = soup.find("tbody").findAll("tr", recursive=False)
+    for message_listing in message_listings:
+        data = message_listing.findAll("td", recursive=False)
+        data2 = data[1]
+        data3 = data[2]
+        time_data = data[3].find("time")
+
+        message_id = data2.find("a").get("href").split("/")[-1].strip()
+        author = data3.text.strip()
+        author_id = data3.find("a").get("href").split("/")[-1].strip()
+        title = data2.text.strip()
+        status = data[0].find("i").get("title").strip()
+        time = [time_data.get("unixtime").strip(),time_data.text.strip()]
+        messages.append([message_id,author,author_id,title,status,time])
+    return messages
 
 login_object = login("username","password")
 
-status = send_message(login_object,"userid","subject","message")
+messages = read_messages(login_object)
+
+print(messages)
+
+#status = send_message(login_object,"userid","subject","message")
