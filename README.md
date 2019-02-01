@@ -87,7 +87,7 @@ Data that can be requested includes:
 	#considering implementing a function to return chapter content and information from a given fiction_id and chapter_num, or just a chapter_id, or potentially, a chapter_link
 		
 
-If using login.py it is possible to login to royalroad and request secure pages, read messages (not yet implemented) and even send messages.
+If using login.py it is possible to login to royalroad and request secure pages, read messages (now implemented) and even send messages.
 
 Eg.
 
@@ -96,3 +96,6 @@ Eg.
 
     status = send_message(login_object,"userid","subject","message")
         #returns true if the message successfully sent, and false if not.
+
+    messages = read_messages(login_object)
+	#returns all messages as a list in a list of messages that have not been deleted. Messages are as follows, [message_id,author,author_id,title,status,time]
