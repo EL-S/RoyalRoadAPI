@@ -105,23 +105,91 @@ def request_secure_page(url,login_object): #implement retry logic
     soup = BeautifulSoup(html, "lxml")
     return soup
 
-def send_message(login_object,recipients,subject,message,replyto="",action="send"):
-    post_url = "https://www.royalroad.com/private/send/"
-    token_url = "https://www.royalroad.com/private/send"
-    post_data = {"replyto": replyto, #the messageid of the message being quick replied to
-                    "Uid": recipients,
-                    "Subject": subject,
-                    "content": message,
-                    "action": action}
-    title = do_secure_post(login_object,token_url,post_url,post_data)
-    if "pm sent".lower() in title.lower():
-            status = True
-            print("Message sent.")
-    else:
-        status = False
-        print("Message failed to send.")
+def do_secure_post(login_object,token_url,post_url,post_data): #only deletes at the moment, need to figure out a good way to reuse code for sending messages and other post request, maybe send post data to this, it grabs security token, and combines?
+    cookie = login_object[0]['cookie'][:-1]
+    soup = request_secure_page(token_url, login_object)
+
+    requesttoken = soup.find("input", attrs={"name":"__RequestVerificationToken"}).get("value")
     
-    return status
+    cfuid = cookie.split(";")[0].split("=")[1]
+    ga = cookie.split(";")[1].split("=")[1]
+    visited = cookie.split(";")[3].split("=")[1]
+    notif_dismiss = "1"
+    royalroad_sessionid = cookie.split(";")[4].split("=")[1]
+    gid = cookie.split(";")[2].split("=")[1]
+    
+    antiforgery = cookie.split(";")[5].split("=")[1]
+    identity_application = cookie.split(";")[6].split("=")[1]
+    
+    cookie_new = "__cfduid="+cfuid+"; _ga="+ga+"; visited="+visited+"; notif_dismiss-987973="+notif_dismiss+"; RoyalRoad.SessionId="+royalroad_sessionid+"; .AspNetCore.Antiforgery.w5W7x28NAIs="+antiforgery+"; _gid="+gid+"; .AspNetCore.Identity.Application="+identity_application
+
+    action = "delete" #maybe
+
+    data = {"__RequestVerificationToken": requesttoken}
+
+    for key in post_data:
+        data[key] = post_data[key]
+    
+    url_encoded = urllib.parse.urlencode(data) #maybe this is wrong
+    content_length = str(len(url_encoded))
+    headers = {"accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
+                "accept-encoding": "gzip, deflate",
+                "accept-language": "en-US,en;q=0.9",
+                "cache-control": "max-age=0",
+                "content-length": content_length, #can be anything
+                "content-type": "application/x-www-form-urlencoded",
+                "cookie": cookie_new, #must be correct
+                "origin": "https://www.royalroad.com",
+                "referer": token_url, #can be anything?
+                "upgrade-insecure-requests": "1",
+                "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36"}
+
+    req = requests.post(post_url, data=data, headers=headers)
+
+    soup = BeautifulSoup(req.text, "lxml")
+    title = soup.find("title").text
+    return title
+
+def send_message(login_object,recipients,subject,message,replyto="",action="send"):
+    if login_object == None:
+        print("Failed to Delete Message: Not Logged In.")
+        status = False
+        return status
+    else:
+        post_url = "https://www.royalroad.com/private/send/"
+        token_url = "https://www.royalroad.com/private/send"
+        post_data = {"replyto": replyto, #the messageid of the message being quick replied to
+                        "Uid": recipients,
+                        "Subject": subject,
+                        "content": message,
+                        "action": action}
+        title = do_secure_post(login_object,token_url,post_url,post_data)
+        if "pm sent".lower() in title.lower():
+                status = True
+                print("Message sent.")
+        else:
+            status = False
+            print("Message failed to send.")
+        
+        return status
+
+def delete_message(login_object,message_id):
+    if login_object == None:
+        print("Failed to Delete Message: Not Logged In.")
+        status = False
+        return status
+    else:
+        token_url = "https://www.royalroad.com/private/read/"+message_id
+        post_url = "https://www.royalroad.com/private/delete"
+        post_data = {"pmid": message_id}
+        title = do_secure_post(login_object,token_url,post_url,post_data)
+        if "pm deleted".lower() in title.lower():
+            status = True
+            print("Message deleted.")
+        else:
+            status = False
+            print("Message failed to delete.")
+        return status
 
 def request_message_like_list(login_object,message_type):
     url = "https://www.royalroad.com/private/"
@@ -230,69 +298,6 @@ def extract_message_content(soup):
         return [author_id,recipient_id,author,recipient,title,content,time]
     except:
         print("That message has been deleted, it does not exist, or you do not have permission to view it.")
-
-def do_secure_post(login_object,token_url,post_url,post_data): #only deletes at the moment, need to figure out a good way to reuse code for sending messages and other post request, maybe send post data to this, it grabs security token, and combines?
-    cookie = login_object[0]['cookie'][:-1]
-    soup = request_secure_page(token_url, login_object)
-
-    requesttoken = soup.find("input", attrs={"name":"__RequestVerificationToken"}).get("value")
-    
-    cfuid = cookie.split(";")[0].split("=")[1]
-    ga = cookie.split(";")[1].split("=")[1]
-    visited = cookie.split(";")[3].split("=")[1]
-    notif_dismiss = "1"
-    royalroad_sessionid = cookie.split(";")[4].split("=")[1]
-    gid = cookie.split(";")[2].split("=")[1]
-    
-    antiforgery = cookie.split(";")[5].split("=")[1]
-    identity_application = cookie.split(";")[6].split("=")[1]
-    
-    cookie_new = "__cfduid="+cfuid+"; _ga="+ga+"; visited="+visited+"; notif_dismiss-987973="+notif_dismiss+"; RoyalRoad.SessionId="+royalroad_sessionid+"; .AspNetCore.Antiforgery.w5W7x28NAIs="+antiforgery+"; _gid="+gid+"; .AspNetCore.Identity.Application="+identity_application
-
-    action = "delete" #maybe
-
-    data = {"__RequestVerificationToken": requesttoken}
-
-    for key in post_data:
-        data[key] = post_data[key]
-    
-    url_encoded = urllib.parse.urlencode(data) #maybe this is wrong
-    content_length = str(len(url_encoded))
-    headers = {"accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
-                "accept-encoding": "gzip, deflate",
-                "accept-language": "en-US,en;q=0.9",
-                "cache-control": "max-age=0",
-                "content-length": content_length, #can be anything
-                "content-type": "application/x-www-form-urlencoded",
-                "cookie": cookie_new, #must be correct
-                "origin": "https://www.royalroad.com",
-                "referer": token_url, #can be anything?
-                "upgrade-insecure-requests": "1",
-                "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36"}
-
-    req = requests.post(post_url, data=data, headers=headers)
-
-    soup = BeautifulSoup(req.text, "lxml")
-    title = soup.find("title").text
-    return title
-
-def delete_message(login_object,message_id):
-    if login_object == None:
-        print("Failed to Delete Message: Not Logged In.")
-        status = False
-        return status
-    else:
-        token_url = "https://www.royalroad.com/private/read/"+message_id
-        post_url = "https://www.royalroad.com/private/delete"
-        post_data = {"pmid": message_id}
-        title = do_secure_post(login_object,token_url,post_url,post_data)
-        if "pm deleted".lower() in title.lower():
-            status = True
-            print("Message deleted.")
-        else:
-            status = False
-            print("Message failed to delete.")
-        return status
 
 login_object = login("username","password")
 
