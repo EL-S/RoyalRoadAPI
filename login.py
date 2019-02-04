@@ -45,8 +45,8 @@ def establish_first_connection():
 
     set_cookies = response_headers["Set-Cookie"].split(";")
     timestamp = str(round(time.time()))
-    client_id = str(randint(100000000,999999999))
-    client_id2 = str(randint(100000000,999999999))
+    client_id = str(randint(100000000,999999999)) #maybe do this a proper way
+    client_id2 = str(randint(100000000,999999999)) #maybe do this a proper way
     royalroad_session_id = "372508318544cb51a44a490a91a69ff4" #actually get this value somewhere
     
     cookie = set_cookies[0]+";"+" _ga=GA1.2."+client_id+"."+timestamp+"; _gid=GA1.2."+client_id2+"."+timestamp+"; visited=1; RoyalRoad.SessionId="+royalroad_session_id+"; "+set_cookies[-4].strip().split()[-1]
@@ -299,8 +299,53 @@ def extract_message_content(soup):
     except:
         print("That message has been deleted, it does not exist, or you do not have permission to view it.")
 
+def get_notifications(login_object):
+    if login_object == None:
+        print("Failed to Read Notifications: Not Logged In.")
+    else:
+        url = "https://www.royalroad.com/notifications/get"
+        soup = request_secure_page(url,login_object)
+        notifications = []
+        notifications = extract_notification_content(soup,notifications)  
+        return notifications
+
+def extract_notification_content(soup,notifications):
+    notification_listings = soup.find("body").findAll("li", recursive=False)
+    for notification_listing in notification_listings:
+        notification_id = notification_listing.find("span", attrs={"class":"dismiss-notification"}).get("data-notification").strip()
+        url = notification_listing.find("a").get("href").strip()
+        notif_type = notification_listing.get("class")[0].strip()
+        image_url = notification_listing.find("img").get("src").strip()
+        content = notification_listing.find("span", attrs={"class":"col-xs-8 col-sm-9"}).text.strip()
+        time = notification_listing.find("time")
+        if url[0] == "/":
+            url = "https://www.royalroad.com"+url
+        if image_url[0] == "/":
+            image_url = "https://www.royalroad.com"+image_url
+        if time != None:
+            time = (time.text+"ago").strip()
+        else:
+            time = "Recently"
+        notifications.append([notification_id,notif_type,url,image_url,content,time])
+    return notifications
+
+def delete_notification(login_object,notification_id):
+    if login_object == None:
+        print("Failed to Delete Notification: Not Logged In.")
+        status = False
+        return status
+    else:
+        url = "https://www.royalroad.com/notifications/dismiss?id="+str(notification_id) #1021667"
+        soup = request_secure_page(url,login_object)
+        status = soup.text.strip()
+        if status == "true":
+            print("Deleted Notification.)
+            status = True
+        else:
+            print("Failed to Delete Notification: 404.")
+            status = False
+        return status
+
 login_object = login("username","password")
 
-status = delete_message(login_object,"message_id")
-
-status = send_message(login_object,"user_id","subject","message")
+notifications = get_notifications(login_object)
