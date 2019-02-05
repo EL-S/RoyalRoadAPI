@@ -312,7 +312,6 @@ def get_notifications(login_object):
 def extract_notification_content(soup,notifications):
     notification_listings = soup.find("body").findAll("li", recursive=False)
     for notification_listing in notification_listings:
-        print(notification_listing)
         notification_id = notification_listing.find("span", attrs={"class":"dismiss-notification"}).get("data-notification").strip()
         try:
             url = notification_listing.find("a").get("href").strip()
