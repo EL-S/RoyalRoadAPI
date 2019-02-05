@@ -312,14 +312,18 @@ def get_notifications(login_object):
 def extract_notification_content(soup,notifications):
     notification_listings = soup.find("body").findAll("li", recursive=False)
     for notification_listing in notification_listings:
+        print(notification_listing)
         notification_id = notification_listing.find("span", attrs={"class":"dismiss-notification"}).get("data-notification").strip()
-        url = notification_listing.find("a").get("href").strip()
+        try:
+            url = notification_listing.find("a").get("href").strip()
+            if url[0] == "/":
+                url = "https://www.royalroad.com"+url
+        except:
+            url = None
         notif_type = notification_listing.get("class")[0].strip()
         image_url = notification_listing.find("img").get("src").strip()
         content = notification_listing.find("span", attrs={"class":"col-xs-8 col-sm-9"}).text.strip()
         time = notification_listing.find("time")
-        if url[0] == "/":
-            url = "https://www.royalroad.com"+url
         if image_url[0] == "/":
             image_url = "https://www.royalroad.com"+image_url
         if time != None:
@@ -328,6 +332,23 @@ def extract_notification_content(soup,notifications):
             time = "Recently"
         notifications.append([notification_id,notif_type,url,image_url,content,time])
     return notifications
+
+def mark_notifications_as_read(login_object): #removes the alert that there is new notifications (that's it)
+    if login_object == None:
+        print("Failed to Mark Notifications as Read: Not Logged In.")
+        status = False
+        return status
+    else:
+        url = "https://www.royalroad.com/notifications/clear"
+        soup = request_secure_page(url,login_object)
+        if soup.text == "true":
+            print("Marked Notifications as Read.")
+            status = True
+        else:
+            print("Failed to Mark Notifications as Read: 404.")
+            status = False
+        return status
+
 
 def delete_notification(login_object,notification_id):
     if login_object == None:
@@ -339,13 +360,36 @@ def delete_notification(login_object,notification_id):
         soup = request_secure_page(url,login_object)
         status = soup.text.strip()
         if status == "true":
-            print("Deleted Notification.)
+            print("Deleted Notification.")
             status = True
         else:
             print("Failed to Delete Notification: 404.")
             status = False
         return status
 
+def rate_fiction(login_object, fiction_id, rating): #doesn't work
+    if login_object == None:
+        print("Failed to Rate Fiction: Not Logged In.")
+        status = False
+        return status
+    else:
+        post_url = "https://www.royalroad.com/fictions/rate/"+str(fiction_id)
+        token_url = "https://www.royalroad.com/fiction/"+fiction_id
+        post_data = {"id": fiction_id,
+                    "rating": rating}
+        title = do_secure_post(login_object,token_url,post_url,post_data)
+        print(title)
+        status = True
+        return status
+
 login_object = login("username","password")
 
-notifications = get_notifications(login_object)
+status = rate_fiction(login_object,"fiction_id","rating")
+
+#notifications = get_notifications(login_object)
+
+#print(notifications)
+
+#status = mark_notifications_as_read(login_object)
+
+#print(status)
