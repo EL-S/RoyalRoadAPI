@@ -381,9 +381,31 @@ def rate_fiction(login_object, fiction_id, rating): #doesn't work
         status = True
         return status
 
+def change_password(login_object,password,new_password):
+    if login_object == None:
+        print("Failed to Change Password: Not Logged In.")
+        status = False
+        return status
+    else:
+        post_url = "https://www.royalroad.com/account/changepassword"
+        token_url = "https://www.royalroad.com/account/changepassword"
+        post_data = {"password": password,
+                    "newPassword": new_password,
+                    "verifyPassword": new_password}
+        title = do_secure_post(login_object,token_url,post_url,post_data)
+        if "password changed successfully.".lower() in title.lower():
+            status = True
+            print("Password Changed.")
+        else:
+            status = False
+            print("Password to Change Password: Incorrect Credentials.")
+        return status
+
 login_object = login("username","password")
 
-status = rate_fiction(login_object,"fiction_id","rating")
+#status = rate_fiction(login_object,"fiction_id","rating")
+
+status = change_password(login_object,"password","new_password") #yourmum69
 
 #notifications = get_notifications(login_object)
 
