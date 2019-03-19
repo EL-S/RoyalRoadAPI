@@ -16,6 +16,8 @@ directory = "Error/" #to have a fallback directory in case of errors
 epub_index_start = 1 #to ensure the epub index starts at 1
 file_name_chapter_range = "" #to have a default empty chapter range expression
 
+
+# condense below function
 def get_fiction(fiction_id,directory="Fictions/",start_chapter="first",end_chapter="last"): #download a fiction by id or search
     global epub_index_start,file_name_chapter_range,final_location,plural #access global variables
     try:
@@ -139,6 +141,8 @@ def rn_to_int(rn): #resolve the roman numberals in achievement titles to integer
     except:
         num = 1
     return num
+
+# move below functions into external file
 
 def get_user_fictions(user_id): #returns user fictions
     user_id = get_user_id(user_id)
