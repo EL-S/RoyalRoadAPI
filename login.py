@@ -4,6 +4,8 @@ import time
 from random import randint
 import urllib
 
+# add better security
+
 def login(username,password):
     set_cookies,soup,cookie = establish_first_connection() #establish the first connection and get the required cookies and values from the dom and headers
 
