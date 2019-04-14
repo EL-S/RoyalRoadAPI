@@ -5,6 +5,7 @@ from random import randint
 import urllib
 
 # add better security
+# finish all emulation of the browser for requesting and sending data
 
 def login(username,password):
     set_cookies,soup,cookie = establish_first_connection() #establish the first connection and get the required cookies and values from the dom and headers
