@@ -16,7 +16,8 @@ directory = "Error/" #to have a fallback directory in case of errors
 epub_index_start = 1 #to ensure the epub index starts at 1
 file_name_chapter_range = "" #to have a default empty chapter range expression
 
-
+# save all data with hashes in folders that can be used to locally create epubs
+# fix rare XHTML bugs, find adequate substitution for titles with invalid characters
 # condense below function
 def get_fiction(fiction_id,directory="Fictions/",start_chapter="first",end_chapter="last"): #download a fiction by id or search
     global epub_index_start,file_name_chapter_range,final_location,plural #access global variables
