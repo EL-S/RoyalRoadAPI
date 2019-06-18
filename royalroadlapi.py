@@ -19,6 +19,7 @@ file_name_chapter_range = "" #to have a default empty chapter range expression
 # save all data with hashes in folders that can be used to locally create epubs
 # fix rare XHTML bugs, find adequate substitution for titles with invalid characters
 # condense below function
+# move epub and storage code to separate files
 # improve threading by downloading all chapters from all fictions at once, sorting into folders as it is received
 def get_fiction(fiction_id,directory="Fictions/",start_chapter="first",end_chapter="last"): #download a fiction by id or search
     global epub_index_start,file_name_chapter_range,final_location,plural #access global variables
