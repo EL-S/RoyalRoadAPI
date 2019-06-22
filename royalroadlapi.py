@@ -24,6 +24,11 @@ file_name_chapter_range = "" #to have a default empty chapter range expression
 # improve threading by downloading all chapters from all fictions at once, sorting into folders as it is received
 # sort main file out to improve run time
 # use programming principles to organise the code
+# download thumbnails and store them in folder structure
+# fix spoiler tags in novels
+# fix table formatting
+# maybe allow links to show the destination too
+
 def get_fiction(fiction_id,directory="Fictions/",start_chapter="first",end_chapter="last"): #download a fiction by id or search
     global epub_index_start,file_name_chapter_range,final_location,plural #access global variables
     try:
