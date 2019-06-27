@@ -32,6 +32,7 @@ file_name_chapter_range = "" #to have a default empty chapter range expression
 # have epub validator in separate file
 # have a well organised folder structure so that version management is possible
 # commit working changes for login system
+# fix secure login issues
 
 def get_fiction(fiction_id,directory="Fictions/",start_chapter="first",end_chapter="last"): #download a fiction by id or search
     global epub_index_start,file_name_chapter_range,final_location,plural #access global variables
