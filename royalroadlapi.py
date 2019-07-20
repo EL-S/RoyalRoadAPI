@@ -564,7 +564,7 @@ def get_chapters(chapter_links,directory_loc="Fictions/"): #create a loop object
     for chapter_id in chapter_links: #for each chapter in chapter links
         global i #access the global variable i
         i += 1 #add one to it
-        url = "https://www.royalroad.com/"+str(chapter_id) #construct the url
+        url = "https://www.royalroad.com"+str(chapter_id) #construct the url
         http_client.fetch(url.strip(),handle_chapter_response, method='GET',connect_timeout=10000,request_timeout=10000) #add the url to the event loop
     if chapter_links != []: #if there are links in the loop
         ioloop.IOLoop.instance().start() #start the download
