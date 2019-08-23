@@ -9,11 +9,12 @@ import urllib
 # find out why some data can't be sent/recieved even with the secure login post function
 # allow token input
 
-def login(username,password):
+def login(email,password):
     set_cookies,soup,cookie = establish_first_connection() #establish the first connection and get the required cookies and values from the dom and headers
 
-    response = send_login_request(soup,username,password,cookie) #send a post request with all the information
+    response = send_login_request(soup,email,password,cookie) #send a post request with all the information
 
+    #print(response)
     if response != None:
         set_cookies,cookie = response
         headers = {"accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
@@ -25,7 +26,7 @@ def login(username,password):
                     "User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36"}
 
         user_id = get_logged_in_users_id(headers)
-
+        print(user_id)
         print("Successfully Logged In.")
         
         return [headers,user_id] #return the working login information
@@ -58,14 +59,14 @@ def establish_first_connection():
     
     return set_cookies,soup,cookie
 
-def send_login_request(soup,username,password,cookie):
+def send_login_request(soup,email,password,cookie):
 
     url = "https://www.royalroad.com/account/login"
     rememberme = "false"
     requesttoken = soup.find("input", attrs={"name":"__RequestVerificationToken"}).get("value")
     returnurl = soup.find("input", attrs={"id":"ReturnUrl"}).get("value")
 
-    urlencoded = "ReturnUrl="+returnurl+"&Username="+username+"&Password="+password+"&__RequestVerificationToken="+requesttoken+"&Remember="+rememberme
+    urlencoded = "ReturnUrl="+returnurl+"&Email="+email+"&Password="+password+"&__RequestVerificationToken="+requesttoken+"&Remember="+rememberme
 
     content_length = str(len(urlencoded))
 
@@ -82,13 +83,12 @@ def send_login_request(soup,username,password,cookie):
                 "User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36"}
 
     data = {"ReturnUrl":returnurl,
-            "Username":username,
+            "Email":email,
             "Password":password,
             "_RequestVerificationToken":requesttoken,
             "Remember":rememberme}
 
     login_request = requests.post(url, headers=headers, data=data, allow_redirects=False)
-
     login_response_headers = login_request.headers
     try:
         set_cookies = login_response_headers["Set-Cookie"].split(";")
@@ -148,6 +148,8 @@ def do_secure_post(login_object,token_url,post_url,post_data): #only deletes at 
                 "referer": token_url, #can be anything?
                 "upgrade-insecure-requests": "1",
                 "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36"}
+
+    # utilise webkitform data
 
     req = requests.post(post_url, data=data, headers=headers)
 
@@ -406,11 +408,11 @@ def change_password(login_object,password,new_password):
             print("Password to Change Password: Incorrect Credentials.")
         return status
 
-login_object = login("username","password")
+login_object = login("email","password")
 
 #status = rate_fiction(login_object,"fiction_id","rating")
 
-status = change_password(login_object,"password","new_password") #yourmum69
+#status = change_password(login_object,"oldpassword","newpassword")
 
 #notifications = get_notifications(login_object)
 
