@@ -110,6 +110,8 @@ def request_secure_page(url,login_object): #implement retry logic
     soup = BeautifulSoup(html, "lxml")
     return soup
 
+
+# broken
 def do_secure_post(login_object,token_url,post_url,post_data): #only deletes at the moment, need to figure out a good way to reuse code for sending messages and other post request, maybe send post data to this, it grabs security token, and combines?
     cookie = login_object[0]['cookie'][:-1]
     soup = request_secure_page(token_url, login_object)
@@ -388,7 +390,7 @@ def rate_fiction(login_object, fiction_id, rating): #doesn't work
         status = True
         return status
 
-def change_password(login_object,password,new_password):
+def change_password(login_object,password,new_password): #broken
     if login_object == None:
         print("Failed to Change Password: Not Logged In.")
         status = False
