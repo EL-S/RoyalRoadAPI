@@ -111,7 +111,7 @@ def request_secure_page(url,login_object): #implement retry logic
     return soup
 
 
-# broken
+# broken do to change in data fields system
 def do_secure_post(login_object,token_url,post_url,post_data): #only deletes at the moment, need to figure out a good way to reuse code for sending messages and other post request, maybe send post data to this, it grabs security token, and combines?
     cookie = login_object[0]['cookie'][:-1]
     soup = request_secure_page(token_url, login_object)
