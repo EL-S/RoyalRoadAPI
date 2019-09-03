@@ -8,6 +8,7 @@ import urllib
 # finish all emulation of the browser for requesting and sending data
 # find out why some data can't be sent/recieved even with the secure login post function
 # allow token input
+# refactor code
 
 def login(email,password):
     set_cookies,soup,cookie = establish_first_connection() #establish the first connection and get the required cookies and values from the dom and headers
