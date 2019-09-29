@@ -4,7 +4,7 @@ import time
 from random import randint
 import urllib
 
-# add better security
+# add better security and authentication
 # finish all emulation of the browser for requesting and sending data
 # find out why some data can't be sent/recieved even with the secure login post function
 # allow token input
