@@ -1,7 +1,7 @@
 from royalroadlapi import *
 
 fiction = get_fiction_object(17364)
-data = get_fiction_info(17363)
+data = get_fiction_info(fiction)
 
 get_fictions("11343","11343",directory="Fiction - Epubs/")
 
