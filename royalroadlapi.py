@@ -346,7 +346,7 @@ def get_user_threads_data(soup,threads):
         threads.append([thread_id,link,title,replies,views,time,last_post])
     return threads
 
-def get_user_id(user_name):.  #returns a user's id
+def get_user_id(user_name): #returns a user's id
     try:
         int(user_name) #check if the input value is a user_id and not a user_name
         user_id = user_name #it was a user_id
