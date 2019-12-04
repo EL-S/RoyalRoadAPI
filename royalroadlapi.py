@@ -405,7 +405,7 @@ def chapter_range_string_expressions(start_chapter,end_chapter,epub_index_start,
 
 def search_fiction(search_term): #search royalroad for a fiction using a given string
     search_term = search_term.replace(" ","+") #replace spaces with plus signs
-    url = "https://www.royalroad.com/fictions/search?name="+str(search_term) #construct the url
+    url = "https://www.royalroad.com/fictions/search?title="+str(search_term) #construct the url
     print(url) #print the search url for debug or console purposes
     soup = request_soup(url) #request the soup
     try:
