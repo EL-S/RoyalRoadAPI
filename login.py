@@ -11,6 +11,7 @@ import urllib
 # refactor code
 # make object oriented
 # collaborate with others to optimise code
+# add unit testing to make bug fixes easier
 
 def login(email,password):
     set_cookies,soup,cookie = establish_first_connection() #establish the first connection and get the required cookies and values from the dom and headers
