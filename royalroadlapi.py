@@ -59,16 +59,17 @@ def get_fiction(fiction_id,directory="Fictions/",start_chapter="first",end_chapt
                 downloading_chapter_str = "chapter"+plural+" "+"1-" + str(chapter_amount)+", "+str(downloading_chapter_amount)+"/"+str(chapter_amount) #if it's empty, specify that you are downloading everything
             else: #if the fiction is only one chapter long
                 downloading_chapter_str = "chapter"+plural+" "+"1, "+str(downloading_chapter_amount)+"/"+str(chapter_amount) #only show one chapter in the download string
-            print("Downloading ({}".format(downloading_chapter_str) + ") ID {}: ".format(fiction_id) + title + " - " + author + file_name_chapter_range + ".epub") #print downloading alert to the console
+            print("Downloading ID {} ({}".format(fiction_id,downloading_chapter_str) + ") ID {}: ".format(fiction_id) + title + " - " + author + file_name_chapter_range + ".epub") #print downloading alert to the console
             get_chapters(chapter_links_approved,directory) #perform download of chapters in the range
             return final_location #return the final location it was saved at
         else: #there are no chapters left to download
             if chapter_links == []: #there was none to begin with
-                print("Fiction {} contains no chapters.".format(fiction_id)) #alert the user that the fiction has no chapters
+                print("Downloading ID {}: Fiction contains no chapters.".format(fiction_id)) #alert the user that the fiction has no chapters
             else: #there was some to begin with
-                print("Fiction {} contains no chapters in the given range".format(fiction_id),str(epub_index_start)+"-"+str(end_chapter)+".") #alert the user that the fiction has no chapters in that range
+                print("Downloading ID {}: Fiction contains no chapters in the given range".format(fiction_id),str(epub_index_start)+"-"+str(end_chapter)+".") #alert the user that the fiction has no chapters in that range
     else:
         print("'{}' does not exist.".format(search_term))
+        
 def get_fictions(fiction_id_start=1,fiction_id_end=None,directory="Fictions/"): #downloads multiple fictions, defaulting to download all
     try: #confirm the range is valid
         if fiction_id_end == None:
@@ -90,6 +91,28 @@ def get_fictions(fiction_id_start=1,fiction_id_end=None,directory="Fictions/"): 
                 print("Fiction {} Not Available.".format(i)) #the fiction download failed
                 print("Progress:",str(round((((i-(fiction_id_start))+1)/total)*100,2))+"%") #print progress
                 print("Remaining:",str((total-1)-(i-(fiction_id_start)))) #print remaining
+    finally:
+        print("Program Complete.") #the multidownload has failed or completed
+
+def get_fictions_from_list(fiction_ids=None,directory="Fictions/"): #downloads multiple fictions, defaulting to download all
+    try: #confirm the range is valid
+        total = len(fiction_ids) #the amount of fictions to download
+        if (fiction_ids == None): #you can't download nothing
+            raise Exception('No Fictions.') #raise a custom error about no fictions
+    except:
+        print("Please include fiction ids!") #the numbers are actually letters, words, symboles or floats, etc.
+    else:
+        i = 0
+        for fiction_id in fiction_ids: #begin downloading queue
+            try: #attempt download
+                get_fiction(fiction_id,directory) #download fiction
+            except: #the download failed for some reason, often it doesn't exist
+                print("Fiction {} Not Available.".format(fiction_id)) #the fiction download failed
+            finally:
+                i += 1
+                print("Progress:",str(round(((i)/total)*100,2))+"%") #print progress
+                print("Remaining:",str((total)-i)) #print remaining
+
     finally:
         print("Program Complete.") #the multidownload has failed or completed
 
@@ -449,6 +472,8 @@ def determine_file_location(title,directory,author,file_name_chapter_range):
             author = author.replace(".","dot").strip() #replace all periods if they are the last character to prevent extension issues
     except:
         author = "Unknown" #the name is probably empty
+    title = title.strip()
+    author = author.strip()
     final_location = directory + title + " - " + author + file_name_chapter_range + ".epub" #collact all previous information
     return final_location #return the final location
 
@@ -505,8 +530,8 @@ def get_fiction_title(soup): #get the title of the fiction
 
 def get_fiction_cover_image(soup): #get the cover image source
     cover_image = soup.find('img', attrs={'property': 'image'}).get('src') #get the source
-    if cover_image.lower() == "/content/images/rr-placeholder.jpg" or cover_image == "undefined": #if the source refers to the default internal source or if the source is a string containing undefined
-        cover_image = "http://www.royalroadl.com/Content/Images/rr-placeholder.jpg" #convert it to an external source
+    if cover_image.lower() == "/content/images/nocover-new-min.png" or cover_image.lower() == "undefined": #"/content/images/rr-placeholder.jpg" or cover_image == "undefined": #if the source refers to the default internal source or if the source is a string containing undefined
+        cover_image = "http://www.royalroad.com/Content/Images/nocover-new-min.png" #convert it to an external source
     return cover_image #return the image source
 
 def get_fiction_author(soup): #get the author
@@ -560,7 +585,7 @@ def get_chapters(chapter_links,directory_loc="Fictions/"): #create a loop object
     chapters_downloaded = [] #reset the downloaded chapters
     chapters_html = {} #reset the chapter list and html
     fiction_html = "" #reset the fiction html
-    http_client = httpclient.AsyncHTTPClient(force_instance=True,defaults=dict(user_agent="Mozilla/5.0"),max_clients=20) #initiate the async http loop
+    http_client = httpclient.AsyncHTTPClient(force_instance=True,defaults=dict(user_agent="Mozilla/5.0"),max_clients=100) #initiate the async http loop
     for chapter_id in chapter_links: #for each chapter in chapter links
         global i #access the global variable i
         i += 1 #add one to it
@@ -587,14 +612,12 @@ def save_to_hdd(fiction_html,chapters_html,chapters_downloaded,directory="Fictio
         else: #if not empty
             genre_html += " | " + genre #add a fancy separator and the genre to the end
     if file_name_chapter_range != "": #if the chapter range is not default
-        chapter_range_html = "<p><h2>Chapter" + plural + " " + file_name_chapter_range + "</h2></p>" #specify the chapters contained in the epub
+        chapter_range_text = f"{plural} {file_name_chapter_range}" #specify the chapters contained in the epub
     elif chapter_amount != 1: #else
-        chapter_range_html = "<p><h2>Chapter" + plural + " " + "1-" + str(chapter_amount) + "</h2></p>" #add it to the start of the epub info
+        chapter_range_text = f"{plural} 1-{chapter_amount}" #add it to the start of the epub info
     else:
-        chapter_range_html = "<p><h2>Chapter" + plural + " " + "1</h2></p>" #specify that there is only a single chapter in the fiction
-    stats_html = "</p><p><b>Total Views:</b> " + stats[0] + "<b> | Average Views:</b> " + stats[1] + "<b> | Followers:</b> " + stats[2] + "<b> | Favorites:</b> " + stats[3] + "<b> | Pages:</b> " + stats[5] #format the stats into html
-    statistics = "<b>Chapters:</b> " + str(chapter_amount) + "<b> | Overall Score:</b> " + ratings[0] + "<b> | Best Score:</b> " + ratings[1] + "<b> | Ratings:</b> " + ratings[2] + "</p><p><b>Style Score:</b> " + ratings[3] + "<b> | Story Score:</b> " + ratings[4] + "<b> | Character Score:</b> " + ratings[5] + "<b> | Grammar Score:</b> " + ratings[6] + stats_html + "</p>" #format for info into html
-    data = "<center><img src='../cover.jpg'></img><p><b><h1> \"<a href='" + url + "'>" + str(title) + "</a>\" by \"" + str(author) + "\"</h1></b></p>" + chapter_range_html + "<p><b>" + genre_html + "</b></p><p>" + statistics + "<p><h2>Last updated: " + time + "</h2></p></center><p><h3>Description:</h3> " + str(description) + "</p>"#add the last few pieces of info to the html
+        chapter_range_text = f"{plural} 1" #specify that there is only a single chapter in the fiction
+    chapter_range_html = f"<h2>Chapter{chapter_range_text}</h2>"
     title_clean = re.sub(r'[\\/*?:"<>|]',"",title) #clean the title for windows and other systems
     try:
         if author[-1] == "?": #check for a question mark as the last character
@@ -607,6 +630,11 @@ def save_to_hdd(fiction_html,chapters_html,chapters_downloaded,directory="Fictio
             author_clean = author_clean.replace(".","dot") #if so, replace it as it might cause extension problems, or windows might remove it because of having 2 or more periods in a row
     except:
         author_clean = "Unknown" #the author_clean is likely empty so replace it with 'Unknown'
+    title_clean = title_clean.strip()
+    author_clean = author_clean.strip()
+    stats_html = "<p><b>Total Views:</b> " + stats[0] + "<b> | Average Views:</b> " + stats[1] + "<b> | Followers:</b> " + stats[2] + "<b> | Favorites:</b> " + stats[3] + "<b> | Pages:</b> " + stats[5] + "</p>" #format the stats into html
+    statistics = "<p><b>Chapters:</b> " + str(chapter_amount) + "<b> | Overall Score:</b> " + ratings[0] + "<b> | Best Score:</b> " + ratings[1] + "<b> | Ratings:</b> " + ratings[2] + "</p><p><b>Style Score:</b> " + ratings[3] + "<b> | Story Score:</b> " + ratings[4] + "<b> | Character Score:</b> " + ratings[5] + "<b> | Grammar Score:</b> " + ratings[6] + "</p>" + stats_html #format for info into html
+    data = "<div style='text-align: center'><img src='../cover.jpg' alt='Cover Image' style='display: block; margin-left: auto; margin-right: auto;' /><h1>\"<a href='" + url + "'>" + str(title_clean) + "</a>\" by \"" + str(author_clean) + "\"</h1>" + chapter_range_html + "<p><b>" + genre_html + "</b></p>" + statistics + "<h2>Last updated: " + time + "</h2></div><h3>Description:</h3><p>" + str(description) + "</p>"#add the last few pieces of info to the html
     print("Saving EPUB: " + directory + title_clean + " - " + author_clean + file_name_chapter_range + ".epub") #output the final location to the console
     name = title_clean + " - " + author_clean + file_name_chapter_range #create the name variable using the clean title and author with the chapter range
     folder_name = name + "/" #create the folder name variable
@@ -720,8 +748,9 @@ padding:5px;
     chp = epub_index_start - 1 #declare the starting chapter number
     for chp_id in chapters_downloaded: #for each chapter id that was downloaded
         chp += 1 #add one to the chp number
-        chapter_title = "Chapter " + str(chp) + ": " + chapters_html[chp_id][1] #and use it to name the chapter title with the original chapter title
-        chapter_html = "<?xml version='1.0' encoding='utf-8'?>\n<html xmlns=\"http://www.w3.org/1999/xhtml\">\n\t\t\t\t<head>\n\t\t\t\t\t<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\"/>\n\t\t\t\t\t<title>Chapter " + str(chp) + ": " + chapters_html[chp_id][1] + "</title>\n\t\t\t\t\t<link href=\"style/style.css\" rel=\"stylesheet\" type=\"text/css\"/>\n\t\t\t\t</head>\n\t\t\t\t<body>\n\t\t\t\t\t<h1>Chapter " + str(chp) + ": " + chapters_html[chp_id][1] + "</h1>\n\t\t\t\t\t" + chapters_html[chp_id][0] + "\n\t\t\t\t</body>\n\t\t\t</html>" #create the internal epub chapter html
+        chapter_title_clean = chapters_html[chp_id][1].replace('<','').replace('>','')
+        chapter_title = f"({chp}) {chapter_title_clean}" #and use it to name the chapter title with the original chapter title
+        chapter_html = "<?xml version='1.0' encoding='utf-8'?>\n<html xmlns=\"http://www.w3.org/1999/xhtml\">\n\t\t\t\t<head>\n\t\t\t\t\t<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\"/>\n\t\t\t\t\t<title>Chapter " + str(chp) + ": " + chapter_title_clean + "</title>\n\t\t\t\t\t<link href=\"style/style.css\" rel=\"stylesheet\" type=\"text/css\"/>\n\t\t\t\t</head>\n\t\t\t\t<body>\n\t\t\t\t\t<h1>" + chapters_html[chp_id][1] + "</h1>\n\t\t\t\t\t" + chapters_html[chp_id][0] + "\n\t\t\t\t</body>\n\t\t\t</html>" #create the internal epub chapter html
         chapter_file_name = "chapter_"+str(chp)+".xhtml" #name the chapter file appropriately
         full_path = directory + folder_name + "OEBPS/" + chapter_file_name #declare the full path
         
@@ -782,19 +811,26 @@ padding:5px;
 
 def obtain_and_save_image(directory,cover_image): #decode the base64 image or download the image and then save it
     if (cover_image.split(",")[0] != "data:image/jpeg;base64") and (cover_image.split(",")[0] != "data:image/gif;base64") and (cover_image.split(",")[0] != "data:image/png;base64"): #if the image is not base64 encoded
-        image_data = download_image_data(cover_image) #download the image
+        if cover_image == "http://www.royalroad.com/Content/Images/nocover-new-min.png": #don't download the default image to save data
+            try:
+                with open("nocover.jpg", "rb") as nocover:
+                    image_data = nocover.read()
+            except:
+                image_data = download_image_data("http://www.royalroad.com/Content/Images/rr-placeholder.jpg")
+        else:
+            image_data = download_image_data(cover_image) #download the image
         if image_data == None: #if the image is empty
-            image_data = download_image_data("http://www.royalroadl.com/Content/Images/rr-placeholder.jpg") #download the default image instead
+            image_data = download_image_data("http://www.royalroad.com/Content/Images/rr-placeholder.jpg") #download the default image instead
     else: #else decode the image if it is base64 encoded
         try:
             image_data = base64.b64decode(image_data) #decode the image
         except:
-            image_data = download_image_data("http://www.royalroadl.com/Content/Images/rr-placeholder.jpg") #download the default image if the decode fails
+            image_data = download_image_data("http://www.royalroad.com/Content/Images/rr-placeholder.jpg") #download the default image if the decode fails
     try:
         with open(directory + "cover.jpg", "wb") as cover_image_file: #write the image data to the local location in bytes
             cover_image_file.write(image_data)
     except:
-        image_data = download_image_data("http://www.royalroadl.com/Content/Images/rr-placeholder.jpg") #download the default image if the decode fails
+        image_data = download_image_data("http://www.royalroad.com/Content/Images/rr-placeholder.jpg") #download the default image if the decode fails
         with open(directory + "cover.jpg", "wb") as cover_image_file: #write the image data to the local location in bytes
             cover_image_file.write(image_data)
             
@@ -808,7 +844,7 @@ def download_image_data(cover_image): #download the image data
             if e.code != 404: #and it's not a 404, retry the download
                 download_image_data(cover_image)
         except:
-            download_image_data("http://www.royalroadl.com/Content/Images/rr-placeholder.jpg") #else download the default image
+            download_image_data("http://www.royalroad.com/Content/Images/rr-placeholder.jpg") #else download the default image
 
 def compress_and_convert_to_epub(directory,folder_location,output_location): #compress and convert the file to epub
     global final_location #access global variables
@@ -870,5 +906,5 @@ def handle_chapter_response(response): #asynchronously handle the chapter respon
                 chp = 0 #declare chp as 0
                 for chp_id in chapters_downloaded: #for each chp id downloaded
                     chp += 1 #add one to chp count
-                    fiction_html = fiction_html + "<center><h1 style='margin-top: 10px' class='font-white'>(" + str(chp) + ") " + chapters_html[chp_id][1] + "</center></h1>" + chapters_html[chp_id][0] #and append the entire chapter html to the rest of the story
+                    fiction_html = fiction_html + "<div style='text-align: center'><h1 style='margin-top: 10px' class='font-white'>(" + str(chp) + ") " + chapters_html[chp_id][1] + "</div></h1>" + chapters_html[chp_id][0] #and append the entire chapter html to the rest of the story
                 ioloop.IOLoop.instance().stop() #stop the ioloop and then progress to the save_to_hdd function
