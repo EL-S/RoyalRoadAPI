@@ -454,12 +454,12 @@ def get_fiction_location(fiction_id,directory="Fictions/",start_chapter="first",
     else:
         file_name_chapter_range = "" #set the variable as empty
     try:
-        final_location = determine_file_location(title,directory,author,file_name_chapter_range) #finally collate all the information into a final location
+        final_location = determine_file_location(title,directory,author,file_name_chapter_range,fiction_id) #finally collate all the information into a final location
     except:
         final_location = None #it failed so equate to none
     return final_location #return the final location
 
-def determine_file_location(title,directory,author,file_name_chapter_range):
+def determine_file_location(title,directory,author,file_name_chapter_range,fiction_id):
     title = re.sub(r'[\\/*?:"<>|]',"",re.sub(r'[<>]',"",title)).strip() #prevent breaking the xhtml because of html characters
     try:
         if author[-1] == "?": #if the questionmark is the last character
@@ -474,7 +474,7 @@ def determine_file_location(title,directory,author,file_name_chapter_range):
         author = "Unknown" #the name is probably empty
     title = title.strip()
     author = author.strip()
-    final_location = directory + title + " - " + author + file_name_chapter_range + ".epub" #collact all previous information
+    final_location = directory + fiction_id + " - " + title + " - " + author + file_name_chapter_range + ".epub" #collact all previous information
     return final_location #return the final location
 
 def get_fiction_object(fiction_id):
@@ -619,6 +619,8 @@ def save_to_hdd(fiction_html,chapters_html,chapters_downloaded,directory="Fictio
         chapter_range_text = f"{plural} 1" #specify that there is only a single chapter in the fiction
     chapter_range_html = f"<h2>Chapter{chapter_range_text}</h2>"
     title_clean = re.sub(r'[\\/*?:"<>|]',"",title) #clean the title for windows and other systems
+    title_internal = re.sub(r'[\\/*"<>]',"",title).strip() #these are fine for inside the epub
+    author_internal = re.sub(r'[\\/*"<>]',"",author).strip() #these are fine for inside the epub
     try:
         if author[-1] == "?": #check for a question mark as the last character
             author = author.replace("?","qstnmrk") #if so, replace it with 'qstnmrk' to prevent empty author names
@@ -634,9 +636,10 @@ def save_to_hdd(fiction_html,chapters_html,chapters_downloaded,directory="Fictio
     author_clean = author_clean.strip()
     stats_html = "<p><b>Total Views:</b> " + stats[0] + "<b> | Average Views:</b> " + stats[1] + "<b> | Followers:</b> " + stats[2] + "<b> | Favorites:</b> " + stats[3] + "<b> | Pages:</b> " + stats[5] + "</p>" #format the stats into html
     statistics = "<p><b>Chapters:</b> " + str(chapter_amount) + "<b> | Overall Score:</b> " + ratings[0] + "<b> | Best Score:</b> " + ratings[1] + "<b> | Ratings:</b> " + ratings[2] + "</p><p><b>Style Score:</b> " + ratings[3] + "<b> | Story Score:</b> " + ratings[4] + "<b> | Character Score:</b> " + ratings[5] + "<b> | Grammar Score:</b> " + ratings[6] + "</p>" + stats_html #format for info into html
-    data = "<div style='text-align: center'><img src='../cover.jpg' alt='Cover Image' style='display: block; margin-left: auto; margin-right: auto;' /><h1>\"<a href='" + url + "'>" + str(title_clean) + "</a>\" by \"" + str(author_clean) + "\"</h1>" + chapter_range_html + "<p><b>" + genre_html + "</b></p>" + statistics + "<h2>Last updated: " + time + "</h2></div><h3>Description:</h3><p>" + str(description) + "</p>"#add the last few pieces of info to the html
+    data = "<div style='text-align: center'><img src='../cover.jpg' alt='Cover Image' style='display: block; margin-left: auto; margin-right: auto;' /><h1>\"<a href='" + url + "'>" + str(title_internal) + "</a>\" by \"" + str(author_internal) + "\"</h1>" + chapter_range_html + "<p><b>" + genre_html + "</b></p>" + statistics + "<h2>Last updated: " + time + "</h2></div><h3>Description:</h3><p>" + str(description) + "</p>"#add the last few pieces of info to the html
     print("Saving EPUB: " + directory + title_clean + " - " + author_clean + file_name_chapter_range + ".epub") #output the final location to the console
-    name = title_clean + " - " + author_clean + file_name_chapter_range #create the name variable using the clean title and author with the chapter range
+    fiction_id = url.split("/")[-1].strip()
+    name = fiction_id + " - " + title_clean + " - " + author_clean + file_name_chapter_range #create the name variable using the clean title and author with the chapter range
     folder_name = name + "/" #create the folder name variable
     os.makedirs(directory+folder_name+"OEBPS/", exist_ok=True) #make the OEBPS folder for where the epub archive with the chapter html will be located before deletion
     os.makedirs(directory+folder_name+"META-INF/", exist_ok=True) #make the META-INF folder for where the epub archive meta-inf will be located before deletion
