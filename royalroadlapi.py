@@ -474,7 +474,7 @@ def determine_file_location(title,directory,author,file_name_chapter_range,ficti
         author = "Unknown" #the name is probably empty
     title = title.strip()
     author = author.strip()
-    final_location = directory + fiction_id + " - " + title + " - " + author + file_name_chapter_range + ".epub" #collact all previous information
+    final_location = directory + str(fiction_id) + " - " + title + " - " + author + file_name_chapter_range + ".epub" #collact all previous information
     return final_location #return the final location
 
 def get_fiction_object(fiction_id):
