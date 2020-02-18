@@ -432,7 +432,7 @@ def search_fiction(search_term): #search royalroad for a fiction using a given s
     print(url) #print the search url for debug or console purposes
     soup = request_soup(url) #request the soup
     try:
-        fiction_id = soup.find("div", attrs={"class":"col-sm-8 col-xs-10 search-content"}).find("input").get("id").split("-")[1] #attempt to gather the first fiction id
+        fiction_id = soup.find("div", attrs={"class":"col-sm-10 col-md-8 col-lg-9 col-xs-12 search-content"}).find("input").get("id").split("-")[1] #attempt to gather the first fiction id
     except: #there was no fiction id or the html is incorrect
         return None #return none
     return fiction_id #return the fiction id
@@ -493,6 +493,8 @@ def request_soup(url):
         http_client = httpclient.HTTPClient() #initialise the url request
         html = http_client.fetch(url).body.decode('utf-8') #decode the html response
         soup = BeautifulSoup(html, "lxml") #parse the html
+        if soup.find(has_cloud_flare_data): #remove protected emails by cloudflare
+            soup = decode_email_content(soup)
         return soup #return the soup object
     except httpclient.HTTPError as e: #if the http request fails
         if e.code != 404: #and it is a 404
@@ -597,8 +599,14 @@ def get_chapters(chapter_links,directory_loc="Fictions/"): #create a loop object
 
 def get_chapter_content(html): #get the chapter html from the chapter page
     soup = BeautifulSoup(html, "lxml") #create a soup object
-    chapter_title = soup.find('h1', attrs={'style': 'margin-top: 10px','class': 'font-white'}).text.strip() #extract the chapter title and strip it
-    content_html = str(soup.find('div', attrs={'class': 'chapter-inner chapter-content'})) #extract the chapter html and convert it to a str to prevent type errors
+    chapter_title = soup.find('h1', attrs={'style': 'margin-top: 10px','class': 'font-white'}) #extract the chapter title and strip it
+    if chapter_title.find(has_cloud_flare_data):
+        chapter_title = decode_email_content(chapter_title)
+    chapter_title = chapter_title.text.strip()
+    content_html = soup.find('div', attrs={'class': 'chapter-inner chapter-content'}) #extract the chapter html and convert it to a str to prevent type errors
+    if content_html.find(has_cloud_flare_data):
+        content_html = decode_email_content(content_html)
+    content_html = str(content_html)
     return content_html,chapter_title #return the chapter html and chapter title
 
 
@@ -618,28 +626,29 @@ def save_to_hdd(fiction_html,chapters_html,chapters_downloaded,directory="Fictio
     else:
         chapter_range_text = f"{plural} 1" #specify that there is only a single chapter in the fiction
     chapter_range_html = f"<h2>Chapter{chapter_range_text}</h2>"
-    title_clean = re.sub(r'[\\/*?:"<>|]',"",title) #clean the title for windows and other systems
-    title_internal = re.sub(r'[\\/*"<>]',"",title).strip() #these are fine for inside the epub
-    author_internal = re.sub(r'[\\/*"<>]',"",author).strip() #these are fine for inside the epub
+    # maybe use &gt; amd &lt; in the title and author internal
+    title_clean = re.sub(r'[\\/*"<>]',"",title).strip() #these are fine for inside the epub
+    author_clean = re.sub(r'[\\/*"<>]',"",author).strip() #these are fine for inside the epub
+    title_folder = re.sub(r'[?:|]',"",title_clean).strip() #clean the title for windows and other systems
     try:
         if author[-1] == "?": #check for a question mark as the last character
             author = author.replace("?","qstnmrk") #if so, replace it with 'qstnmrk' to prevent empty author names
     except:
         author = "Unknown" #the name is likely empty and is replaced with 'Unknown'
-    author_clean = re.sub(r'[\\/*?:"<>|]',"",author) #clean the author
+    author_folder = re.sub(r'[?:|]',"",author_clean).strip() #clean the author
     try:
         if author_clean[-1] == ".": #check the clean author for a dot
             author_clean = author_clean.replace(".","dot") #if so, replace it as it might cause extension problems, or windows might remove it because of having 2 or more periods in a row
     except:
         author_clean = "Unknown" #the author_clean is likely empty so replace it with 'Unknown'
-    title_clean = title_clean.strip()
-    author_clean = author_clean.strip()
+    title_internal = title_folder.replace("&","&amp;").strip()
+    author_internal = author_folder.replace("&","&amp;").strip()
     stats_html = "<p><b>Total Views:</b> " + stats[0] + "<b> | Average Views:</b> " + stats[1] + "<b> | Followers:</b> " + stats[2] + "<b> | Favorites:</b> " + stats[3] + "<b> | Pages:</b> " + stats[5] + "</p>" #format the stats into html
     statistics = "<p><b>Chapters:</b> " + str(chapter_amount) + "<b> | Overall Score:</b> " + ratings[0] + "<b> | Best Score:</b> " + ratings[1] + "<b> | Ratings:</b> " + ratings[2] + "</p><p><b>Style Score:</b> " + ratings[3] + "<b> | Story Score:</b> " + ratings[4] + "<b> | Character Score:</b> " + ratings[5] + "<b> | Grammar Score:</b> " + ratings[6] + "</p>" + stats_html #format for info into html
     data = "<div style='text-align: center'><img src='../cover.jpg' alt='Cover Image' style='display: block; margin-left: auto; margin-right: auto;' /><h1>\"<a href='" + url + "'>" + str(title_internal) + "</a>\" by \"" + str(author_internal) + "\"</h1>" + chapter_range_html + "<p><b>" + genre_html + "</b></p>" + statistics + "<h2>Last updated: " + time + "</h2></div><h3>Description:</h3><p>" + str(description) + "</p>"#add the last few pieces of info to the html
-    print("Saving EPUB: " + directory + title_clean + " - " + author_clean + file_name_chapter_range + ".epub") #output the final location to the console
     fiction_id = url.split("/")[-1].strip()
-    name = fiction_id + " - " + title_clean + " - " + author_clean + file_name_chapter_range #create the name variable using the clean title and author with the chapter range
+    print("Saving EPUB: " + directory + str(fiction_id) + " - " + title_folder + " - " + author_folder + file_name_chapter_range + ".epub") #output the final location to the console
+    name = fiction_id + " - " + title_folder + " - " + author_folder + file_name_chapter_range #create the name variable using the clean title and author with the chapter range
     folder_name = name + "/" #create the folder name variable
     os.makedirs(directory+folder_name+"OEBPS/", exist_ok=True) #make the OEBPS folder for where the epub archive with the chapter html will be located before deletion
     os.makedirs(directory+folder_name+"META-INF/", exist_ok=True) #make the META-INF folder for where the epub archive meta-inf will be located before deletion
@@ -662,7 +671,7 @@ def save_to_hdd(fiction_html,chapters_html,chapters_downloaded,directory="Fictio
     <meta name="dtb:maxPageNumber" content="0"/>
   </head>
   <docTitle>
-    <text>"""+str(title_clean)+"""</text>
+    <text>"""+str(title_internal)+"""</text>
   </docTitle>
   <navMap>""")
 
@@ -698,8 +707,8 @@ padding:5px;
 <opf:package version="2.0" unique-identifier="BookId" xmlns:opf="http://www.idpf.org/2007/opf" xmlns:dc="http://purl.org/dc/elements/1.1/">
   <opf:metadata>
     <dc:identifier id="BookId" opf:scheme="UUID">""" + uuid_str + """</dc:identifier>
-    <dc:title>""" + title_clean + """</dc:title>
-    <dc:creator opf:role="aut">""" + author_clean + """</dc:creator>
+    <dc:title>""" + title_internal + """</dc:title>
+    <dc:creator opf:role="aut">""" + author_internal + """</dc:creator>
     <dc:language>en</dc:language>
     <dc:language>eng</dc:language>
     <opf:meta name="generator" content="DumbEpub"/>
@@ -751,7 +760,7 @@ padding:5px;
     chp = epub_index_start - 1 #declare the starting chapter number
     for chp_id in chapters_downloaded: #for each chapter id that was downloaded
         chp += 1 #add one to the chp number
-        chapter_title_clean = chapters_html[chp_id][1].replace('<','').replace('>','')
+        chapter_title_clean = chapters_html[chp_id][1].replace('<','').replace('>','').replace("&","&amp;") #TODO check if amp should be used here, it should be probably but is applied lower too
         chapter_title = f"({chp}) {chapter_title_clean}" #and use it to name the chapter title with the original chapter title
         chapter_html = "<?xml version='1.0' encoding='utf-8'?>\n<html xmlns=\"http://www.w3.org/1999/xhtml\">\n\t\t\t\t<head>\n\t\t\t\t\t<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\"/>\n\t\t\t\t\t<title>Chapter " + str(chp) + ": " + chapter_title_clean + "</title>\n\t\t\t\t\t<link href=\"style/style.css\" rel=\"stylesheet\" type=\"text/css\"/>\n\t\t\t\t</head>\n\t\t\t\t<body>\n\t\t\t\t\t<h1>" + chapters_html[chp_id][1] + "</h1>\n\t\t\t\t\t" + chapters_html[chp_id][0] + "\n\t\t\t\t</body>\n\t\t\t</html>" #create the internal epub chapter html
         chapter_file_name = "chapter_"+str(chp)+".xhtml" #name the chapter file appropriately
@@ -884,6 +893,27 @@ def addFolderToZip(zip_file_epub, folder_location): #add a folder recursively to
         elif os.path.isdir(full_path): #if the path is actually a folder
             addFolderToZip(zip_file_epub, full_path) #add that folder to the zip too
 
+def decode_email_content(soup):
+    emails = soup.find_all(has_cloud_flare_data)
+    for email_protected in emails:
+        data = email_protected.get("data-cfemail")
+        email = decode_email(data)
+        email_protected.replaceWith(email)
+    return soup
+
+def decode_email(data_string):
+    email = ""
+    r = int(data_string[:2], 16)
+    i = 2
+    while len(data_string)-i:
+        char = int(data_string[i:i+2], 16) ^ r
+        email += chr(char)
+        i += 2
+    return email
+
+def has_cloud_flare_data(tag):
+    return tag.has_attr('data-cfemail')
+
 def handle_chapter_response(response): #asynchronously handle the chapter responses
     global i,chapters_downloaded,chapters_html,fiction_html,directory,http_client #access global variables
     if response.code == 599: #if the request failed (timeout or 404)
@@ -909,5 +939,5 @@ def handle_chapter_response(response): #asynchronously handle the chapter respon
                 chp = 0 #declare chp as 0
                 for chp_id in chapters_downloaded: #for each chp id downloaded
                     chp += 1 #add one to chp count
-                    fiction_html = fiction_html + "<div style='text-align: center'><h1 style='margin-top: 10px' class='font-white'>(" + str(chp) + ") " + chapters_html[chp_id][1] + "</div></h1>" + chapters_html[chp_id][0] #and append the entire chapter html to the rest of the story
+                    #fiction_html = fiction_html + "<div style='text-align: center'><h1 style='margin-top: 10px' class='font-white'>(" + str(chp) + ") " + chapters_html[chp_id][1] + "</div></h1>" + chapters_html[chp_id][0] #and append the entire chapter html to the rest of the story
                 ioloop.IOLoop.instance().stop() #stop the ioloop and then progress to the save_to_hdd function
