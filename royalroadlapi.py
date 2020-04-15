@@ -930,14 +930,19 @@ def handle_chapter_response(response): #asynchronously handle the chapter respon
                 chapter_id = int(url.split("/")[-2]) #get the chapter id from the url
             except:
                 chapter_id = int(url.split("?")[0].split("/")[-1]) #the chapter id is presented weirdly occasionally and as such this is the other method to get the chapter id from the url
-            chapters_downloaded.append(chapter_id) #append the chapter id to the chapters_downloaded list
-            html = get_chapter_content(html) #get the html content of the chapter from the page
-            chapters_html[chapter_id] = html #set the chapter id value in the chapters_html dictionary to the chapter html
-            i -= 1 #subtract 1 from the remaining chapter links
-            if i == 0: #if all the chapters are downloaded for the fiction
-                chapters_downloaded.sort(key=int) #sort the chapter ids so the fiction is in chronological order (very important)
-                chp = 0 #declare chp as 0
-                for chp_id in chapters_downloaded: #for each chp id downloaded
-                    chp += 1 #add one to chp count
-                    #fiction_html = fiction_html + "<div style='text-align: center'><h1 style='margin-top: 10px' class='font-white'>(" + str(chp) + ") " + chapters_html[chp_id][1] + "</div></h1>" + chapters_html[chp_id][0] #and append the entire chapter html to the rest of the story
-                ioloop.IOLoop.instance().stop() #stop the ioloop and then progress to the save_to_hdd function
+            try:
+                chapters_downloaded.append(chapter_id) #append the chapter id to the chapters_downloaded list
+                html = get_chapter_content(html) #get the html content of the chapter from the page
+                chapters_html[chapter_id] = html #set the chapter id value in the chapters_html dictionary to the chapter html
+                i -= 1 #subtract 1 from the remaining chapter links
+                if i == 0: #if all the chapters are downloaded for the fiction
+                    chapters_downloaded.sort(key=int) #sort the chapter ids so the fiction is in chronological order (very important)
+                    chp = 0 #declare chp as 0
+                    for chp_id in chapters_downloaded: #for each chp id downloaded
+                        chp += 1 #add one to chp count
+                        #fiction_html = fiction_html + "<div style='text-align: center'><h1 style='margin-top: 10px' class='font-white'>(" + str(chp) + ") " + chapters_html[chp_id][1] + "</div></h1>" + chapters_html[chp_id][0] #and append the entire chapter html to the rest of the story
+                    ioloop.IOLoop.instance().stop() #stop the ioloop and then progress to the save_to_hdd function
+
+            except: # something went wrong, probably empty response, retry
+                http_client.fetch(response.effective_url.strip(), handle_chapter_response, method='GET',connect_timeout=10,request_timeout=10)
+            
