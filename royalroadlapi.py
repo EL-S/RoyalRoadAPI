@@ -7,6 +7,10 @@ import uuid #to give each epub a unique identifier
 from shutil import rmtree #to create archives and delete files
 import zipfile #to create archives
 import base64 #to encode and decode base64 data (like images)
+import selenium
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+import time
 
 i = 0 #to track the ioloop
 chapters_downloaded = []
@@ -39,6 +43,10 @@ file_name_chapter_range = "" #to have a default empty chapter range expression
 
 def get_fiction(fiction_id,directory="Fictions/",start_chapter="first",end_chapter="last"): #download a fiction by id or search
     global epub_index_start,file_name_chapter_range,final_location,plural #access global variables
+    try:
+        headers
+    except:
+        cloud_flare_bypass()
     try:
         int(fiction_id) #check for fiction id
     except:
@@ -491,7 +499,7 @@ def get_fiction_object(fiction_id):
 def request_soup(url):
     try:
         http_client = httpclient.HTTPClient() #initialise the url request
-        html = http_client.fetch(url).body.decode('utf-8') #decode the html response
+        html = http_client.fetch(url, headers=headers).body.decode('utf-8') #decode the html response
         soup = BeautifulSoup(html, "lxml") #parse the html
         if soup.find(has_cloud_flare_data): #remove protected emails by cloudflare
             soup = decode_email_content(soup)
@@ -587,12 +595,12 @@ def get_chapters(chapter_links,directory_loc="Fictions/"): #create a loop object
     chapters_downloaded = [] #reset the downloaded chapters
     chapters_html = {} #reset the chapter list and html
     fiction_html = "" #reset the fiction html
-    http_client = httpclient.AsyncHTTPClient(force_instance=True,defaults=dict(user_agent="Mozilla/5.0"),max_clients=100) #initiate the async http loop
+    http_client = httpclient.AsyncHTTPClient(force_instance=True,max_clients=100) #initiate the async http loop
     for chapter_id in chapter_links: #for each chapter in chapter links
         global i #access the global variable i
         i += 1 #add one to it
         url = "https://www.royalroad.com"+str(chapter_id) #construct the url
-        http_client.fetch(url.strip(),handle_chapter_response, method='GET',connect_timeout=10000,request_timeout=10000) #add the url to the event loop
+        http_client.fetch(url.strip(),handle_chapter_response, method='GET',connect_timeout=10000,request_timeout=10000, headers=headers) #add the url to the event loop
     if chapter_links != []: #if there are links in the loop
         ioloop.IOLoop.instance().start() #start the download
         save_to_hdd(fiction_html,chapters_html,chapters_downloaded,directory) #when the download is finished, save the files
@@ -849,7 +857,7 @@ def obtain_and_save_image(directory,cover_image): #decode the base64 image or do
 def download_image_data(cover_image): #download the image data
     try:
         http_client_image = httpclient.HTTPClient() #initiate the http request
-        image_data = http_client_image.fetch(cover_image).body #collect the body from the response
+        image_data = http_client_image.fetch(cover_image, headers=headers).body #collect the body from the response
         return image_data #return the image data
     except httpclient.HTTPError: #if a http error occurs
         try:
@@ -914,17 +922,38 @@ def decode_email(data_string):
 def has_cloud_flare_data(tag):
     return tag.has_attr('data-cfemail')
 
+def cloud_flare_bypass():
+    global headers
+    WINDOW_SIZE = "1920,1080"
+
+    chrome_options = Options()  
+    chrome_options.add_argument("--headless")
+    user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.163 Safari/537.36"
+    chrome_options.add_argument("--window-size=%s" % WINDOW_SIZE)
+    chrome_options.add_argument("user-agent="+user_agent)
+    chrome_options.add_experimental_option('excludeSwitches', ['enable-logging'])
+
+    driver = webdriver.Chrome(options=chrome_options)
+    driver.get("https://www.royalroad.com/")
+    driver.get_screenshot_as_file("capture.png")
+    time.sleep(10)
+    #html = driver.page_source
+    cookies = " ".join([c["name"]+"="+c["value"]+";" for c in driver.get_cookies()])
+    headers = {"user-agent":user_agent, "cookie":cookies}
+    driver.close()
+    return headers
+
 def handle_chapter_response(response): #asynchronously handle the chapter responses
     global i,chapters_downloaded,chapters_html,fiction_html,directory,http_client #access global variables
     if response.code == 599: #if the request failed (timeout or 404)
         print(response.effective_url,"error") #print an error to the console
-        http_client.fetch(response.effective_url.strip(), handle_chapter_response, method='GET',connect_timeout=10,request_timeout=10) #add the failed url to the loop and give it a 10 second timeout
+        http_client.fetch(response.effective_url.strip(), handle_chapter_response, method='GET',connect_timeout=10,request_timeout=10, headers=headers) #add the failed url to the loop and give it a 10 second timeout
     else:
         html = response.body.decode('utf-8') #decode the response html
         url = response.effective_url #clarify the url of the response
         if "Could not find host | www.royalroad.com | Cloudflare".lower() in html.lower(): #if the page is incorrect and actually a cloudflare auto flag
             print("Cloudflare Problem! Retrying") #alert the console that cloudflare is interfering
-            http_client.fetch(response.effective_url.strip(), handle_chapter_response, method='GET',connect_timeout=10,request_timeout=10) #retry the chapter request with a 10 second timeout
+            http_client.fetch(response.effective_url.strip(), handle_chapter_response, method='GET',connect_timeout=10,request_timeout=10, headers=headers) #retry the chapter request with a 10 second timeout
         else: #if the page is not cloudflare
             try:
                 chapter_id = int(url.split("/")[-2]) #get the chapter id from the url
@@ -944,5 +973,5 @@ def handle_chapter_response(response): #asynchronously handle the chapter respon
                     ioloop.IOLoop.instance().stop() #stop the ioloop and then progress to the save_to_hdd function
 
             except: # something went wrong, probably empty response, retry
-                http_client.fetch(response.effective_url.strip(), handle_chapter_response, method='GET',connect_timeout=10,request_timeout=10)
-            
+                cloud_flare_bypass()
+                http_client.fetch(response.effective_url.strip(), handle_chapter_response, method='GET',connect_timeout=10,request_timeout=10, headers=headers)
