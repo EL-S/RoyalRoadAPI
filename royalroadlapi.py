@@ -12,6 +12,10 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 import time
 
+import sys, asyncio
+if sys.version_info[0]==3 and sys.version_info[1] >= 8 and sys.platform.startswith('win'):
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
 i = 0 #to track the ioloop
 chapters_downloaded = []
 chapters_html = {} #the dictionary containing all the downloaded chapter ids with their respective html
